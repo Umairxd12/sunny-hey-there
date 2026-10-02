@@ -38,10 +38,10 @@ function SkillManager() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["skills"] });
 
   async function onFile(file: File) {
-    if (!file.name.toLowerCase().endsWith(".md")) return toast.error("Please upload a .md file.");
-    if (file.size > MAX_BYTES) return toast.error("File is too large (max 500 KB).");
+    if (!file.name.toLowerCase().endsWith(".md")) { toast.error("Please upload a .md file."); return; }
+    if (file.size > MAX_BYTES) { toast.error("File is too large (max 500 KB)."); return; }
     const content = await file.text();
-    if (!content.trim()) return toast.error("This file is empty.");
+    if (!content.trim()) { toast.error("This file is empty."); return; }
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -71,7 +71,7 @@ function SkillManager() {
   async function activate(versionId: string, version: number) {
     if (!data?.isAdmin || !data.skill) return;
     const { error } = await supabase.from("skills").update({ active_version_id: versionId }).eq("id", data.skill.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Version ${version} is now active`);
     refresh();
   }

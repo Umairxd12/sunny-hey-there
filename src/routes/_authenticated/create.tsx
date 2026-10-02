@@ -31,7 +31,7 @@ function CreateVideo() {
       .insert({ title, idea, target_duration_seconds: Number(duration), aspect_ratio: ratio, user_id: u.user!.id })
       .select("id").single();
     setBusy(false);
-    if (error || !data) return toast.error(error?.message ?? "Could not create project");
+    if (error || !data) { toast.error(error?.message ?? "Could not create project"); return; }
     navigate({ to: "/projects/$projectId", params: { projectId: data.id } });
   }
 
