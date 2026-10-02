@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, ChevronDown, Loader2, Play, RotateCcw } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Loader2, Lock, Play, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, StatusBadge } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { STAGES, nextRunnableIndex } from "@/lib/pipeline";
+import { LOCKED_STAGES, STAGES, nextRunnableIndex } from "@/lib/pipeline";
 import { runPipelineStep } from "@/lib/pipeline.functions";
 import { pageHead } from "@/lib/seo";
 
@@ -65,9 +65,30 @@ function ProjectPage() {
           <span className="text-muted-foreground">{doneCount} of {STAGES.length} stages done</span>
         </div>
         <Progress className="mt-3" value={(doneCount / STAGES.length) * 100} />
+        <p className="mt-3 text-sm">
+          {doneCount === STAGES.length ? "Your video is finished." : <>Your video is now at <span className="font-semibold">Step {nextIdx + 1} · {STAGES[nextIdx]?.label}</span></>}
+        </p>
         {project.last_error && (
           <p className="mt-3 flex items-start gap-2 text-sm text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" />{project.last_error}</p>
         )}
+        <ol className="mt-5 flex gap-1 overflow-x-auto pb-1" aria-label="Production timeline">
+          {STAGES.map((def, i) => {
+            const s = running === def.key ? "running" : stepOf(def.key)?.status ?? "pending";
+            const dot = s === "done" ? "bg-primary text-primary-foreground" : s === "running" ? "bg-primary/20 text-primary ring-2 ring-primary" : s === "failed" ? "bg-destructive text-destructive-foreground" : s === "blocked" ? "bg-accent text-accent-foreground ring-2 ring-border" : i === nextIdx ? "bg-secondary ring-2 ring-primary" : "bg-secondary text-muted-foreground";
+            return (
+              <li key={def.key} className="flex min-w-[76px] flex-1 flex-col items-center gap-1.5 text-center">
+                <div className="flex w-full items-center">
+                  <span className={`h-0.5 flex-1 ${i === 0 ? "opacity-0" : isDone(STAGES[i - 1]!.key) ? "bg-primary" : "bg-border"}`} />
+                  <span className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${dot}`}>
+                    {s === "done" ? <Check className="size-3.5" /> : s === "running" ? <Loader2 className="size-3.5 animate-spin" /> : i + 1}
+                  </span>
+                  <span className={`h-0.5 flex-1 ${i === STAGES.length - 1 ? "opacity-0" : isDone(def.key) ? "bg-primary" : "bg-border"}`} />
+                </div>
+                <span className={`text-[11px] leading-tight ${i === nextIdx ? "font-semibold" : "text-muted-foreground"}`}>{def.label}</span>
+              </li>
+            );
+          })}
+        </ol>
       </div>
       <ol className="space-y-3">
         {STAGES.map((def, i) => {
@@ -76,12 +97,13 @@ function ProjectPage() {
           const canRun = i <= nextIdx && !running;
           const isText = def.capability === "text";
           return (
-            <li key={def.key} className="rounded-2xl border bg-card">
+            <li key={def.key} className={`rounded-2xl border bg-card ${i === nextIdx ? "border-primary/50" : ""}`}>
               <Collapsible>
                 <div className="flex flex-wrap items-center gap-4 p-5">
                   <div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary font-display text-sm font-semibold">{i + 1}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{def.label}</h3><StatusBadge status={status} />
+                      {LOCKED_STAGES.has(def.key) && st?.status === "done" && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"><Lock className="size-3" />Locked</span>}
                       {!isText && <span className="text-xs text-muted-foreground">Needs a video provider</span>}</div>
                     <p className="text-sm text-muted-foreground">{def.description}</p>
                     {st?.error && <p className="mt-1 text-sm text-destructive">{st.error}</p>}
