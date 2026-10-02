@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS topic text, ADD COLUMN IF NOT EXISTS target_platform text, ADD COLUMN IF NOT EXISTS target_audience text, ADD COLUMN IF NOT EXISTS reference_notes text;
