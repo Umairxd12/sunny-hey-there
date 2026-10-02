@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { STATUS_LABEL, type ProjectStatus } from "@/lib/pipeline";
 
 export function PageHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
@@ -37,11 +38,15 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
   in_production: { label: "In production", cls: "bg-primary/15 text-primary" },
   active: { label: "Active", cls: "bg-success/15 text-success" },
+  inactive: { label: "Inactive", cls: "bg-muted text-muted-foreground" },
   disabled: { label: "Disabled", cls: "bg-muted text-muted-foreground" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const s = STATUS[status] ?? { label: status, cls: "bg-muted text-muted-foreground" };
+  const project = STATUS_LABEL[status as ProjectStatus];
+  const s = STATUS[status] ?? (project
+    ? { label: project, cls: status === "COMPLETED" ? "bg-success/15 text-success" : status === "FAILED" ? "bg-destructive/15 text-destructive" : status === "DRAFT" ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary" }
+    : { label: status, cls: "bg-muted text-muted-foreground" });
   return <Badge variant="secondary" className={cn("border-0 font-medium", s.cls)}>{s.label}</Badge>;
 }
 
