@@ -58,7 +58,7 @@ function ProjectPage() {
   return (
     <>
       <PageHeader title={project.title} description={project.idea}
-        action={<Button variant="outline" asChild><Link to="/projects">All projects</Link></Button>} />
+        action={<div className="flex gap-2"><Button asChild><Link to="/workspace/$projectId" params={{ projectId }}>Open video workspace</Link></Button><Button variant="outline" asChild><Link to="/projects">All projects</Link></Button></div>} />
       <div className="mb-6 rounded-2xl border bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2 font-medium">Current status <StatusBadge status={project.status} /></span>
