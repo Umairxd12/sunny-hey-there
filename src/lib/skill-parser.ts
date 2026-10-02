@@ -21,7 +21,7 @@ export function parseSkill(content: string): { parsed: ParsedSkill; error: strin
   const headings = lines
     .map((l) => /^(#{1,6})\s+(.+?)\s*#*$/.exec(l))
     .filter((m): m is RegExpExecArray => !!m)
-    .map((m) => ({ level: m[1].length, text: m[2] }));
+    .map((m) => ({ level: (m[1] ?? "#").length, text: m[2] ?? "" }));
   const words = content.trim() ? content.trim().split(/\s+/).length : 0;
   const parsed: ParsedSkill = { title: headings[0]?.text ?? "Video production skill", headings, words, lines: lines.length };
   if (!content.trim()) return { parsed, error: "This file is empty." };

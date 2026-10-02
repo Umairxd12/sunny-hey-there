@@ -60,7 +60,7 @@ export type StageResult = { ok: true } | { ok: false; error: string; blocked?: b
 export async function runStage(db: Db, userId: string, projectId: string, stageKey: string): Promise<StageResult> {
   const idx = STAGES.findIndex((s) => s.key === stageKey);
   if (idx === -1) return { ok: false, error: "Unknown stage." };
-  const stage = STAGES[idx];
+  const stage = STAGES[idx]!;
 
   const { data: project } = await db.from("projects").select("*").eq("id", projectId).single();
   if (!project) return { ok: false, error: "Project not found." };
