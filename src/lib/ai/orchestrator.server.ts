@@ -53,8 +53,8 @@ export function buildProductionContext(args: {
   project: Project;
   outputs: Record<string, string>;
   stageKey: string;
-  task?: string;
-  extra?: string;
+  task?: string | undefined;
+  extra?: string | undefined;
 }) {
   const { skill, project, outputs, stageKey } = args;
   const section = (title: string, body?: string | null) => `## ${title}\n${body?.trim() ? body.trim() : "(not available yet)"}`;
@@ -207,7 +207,7 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
 }
 
 /** Suggests video ideas from the active skill when the user has none. */
-export async function suggestIdeas(input: { topic?: string; platform?: string; audience?: string; duration: number; language: string }) {
+export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }) {
   const skill = await loadActiveSkill();
   if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
