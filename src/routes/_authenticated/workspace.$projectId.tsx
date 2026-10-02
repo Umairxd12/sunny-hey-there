@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { getEditingRecommendations, regenerateClip, renderMaster } from "@/lib/workspace.functions";
 import { pageHead } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/workspace/$projectId")({
   head: () => pageHead("Video workspace", "Review, edit and finish a generated cartoon video."),
@@ -81,7 +82,7 @@ function Workspace() {
     try { await fn(); if (done) toast.success(done); } catch { toast.error("Something went wrong. Please try again."); }
     finally { setBusy(null); refresh(); }
   }
-  const update = (id: string, patch: Record<string, unknown>, action: string) =>
+  const update = (id: string, patch: Database["public"]["Tables"]["video_clips"]["Update"], action: string) =>
     act(id + action, async () => { const { error } = await supabase.from("video_clips").update(patch).eq("id", id); if (error) throw error; await log(action); });
 
   async function move(idx: number, dir: -1 | 1) {
@@ -96,7 +97,7 @@ function Workspace() {
 
   async function split(c: typeof clips[number], at: number) {
     const from = Number(c.from_s), to = Number(c.to_s);
-    if (!(at > from && at < to)) return toast.error(`Pick a second between ${from} and ${to}.`);
+    if (!(at > from && at < to)) { toast.error(`Pick a second between ${from} and ${to}.`); return; }
     await act("split", async () => {
       for (const later of clips.filter((x) => x.position > c.position)) await supabase.from("video_clips").update({ position: later.position + 1 }).eq("id", later.id);
       await supabase.from("video_clips").update({ to_s: at, trim_end: 0 }).eq("id", c.id);
@@ -132,7 +133,7 @@ function Workspace() {
     }, schedule ? "Post saved — set the time in Scheduler" : "Post saved — publish it from Scheduler once an account is connected");
   }
 
-  const copy = (t: string, what: string) => { if (!t) return toast.error(`No ${what} yet — run the Metadata stage.`); navigator.clipboard.writeText(t); toast.success(`${what} copied`); };
+  const copy = (t: string, what: string) => { if (!t) { toast.error(`No ${what} yet — run the Metadata stage.`); return; } navigator.clipboard.writeText(t); toast.success(`${what} copied`); };
 
   return (
     <>
