@@ -1,4 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { BarChart3, BookOpenText, CalendarDays, Clapperboard, Cpu, FolderKanban, Film, LayoutDashboard, LogOut, Menu, Settings, Share2, Sparkles, Timer, Users, PanelsTopLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +53,12 @@ function Brand() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
+  const qc = useQueryClient();
+  const signOut = async () => {
+    await qc.cancelQueries(); qc.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar px-3 lg:flex">
