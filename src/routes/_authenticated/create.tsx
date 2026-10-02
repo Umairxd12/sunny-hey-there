@@ -22,13 +22,16 @@ function CreateVideo() {
   const [duration, setDuration] = useState("30");
   const [ratio, setRatio] = useState("9:16");
   const [busy, setBusy] = useState(false);
+  const [language, setLanguage] = useState("English");
+  const [style, setStyle] = useState("");
+  const [reqs, setReqs] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase.from("projects")
-      .insert({ title, idea, target_duration_seconds: Number(duration), aspect_ratio: ratio, user_id: u.user!.id })
+      .insert({ title, idea, target_duration_seconds: Number(duration), aspect_ratio: ratio, language, visual_style: style || null, video_requirements: reqs || null, user_id: u.user!.id })
       .select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "Could not create project"); return; }
@@ -49,6 +52,11 @@ function CreateVideo() {
             <Select value={ratio} onValueChange={setRatio}><SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="9:16">Vertical 9:16 (Shorts, TikTok, Reels)</SelectItem><SelectItem value="16:9">Wide 16:9 (YouTube)</SelectItem><SelectItem value="1:1">Square 1:1</SelectItem></SelectContent></Select></div>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label htmlFor="lang">Language</Label><Input id="lang" value={language} onChange={(e) => setLanguage(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="sty">Visual style notes (optional)</Label><Input id="sty" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="Pixar-like, soft pastel lighting" /></div>
+        </div>
+        <div className="space-y-1.5"><Label htmlFor="req">Video requirements (optional)</Label><Textarea id="req" rows={3} value={reqs} onChange={(e) => setReqs(e.target.value)} placeholder="No text on screen, end with a logo shot, kid-safe…" /></div>
         <Button disabled={busy}>{busy ? "Creating…" : "Create project"}</Button>
       </form>
     </>

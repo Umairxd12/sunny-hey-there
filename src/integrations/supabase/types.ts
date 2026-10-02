@@ -162,38 +162,53 @@ export type Database = {
         Row: {
           aspect_ratio: string
           created_at: string
+          current_stage: string | null
           id: string
           idea: string
+          language: string
+          last_error: string | null
           skill_version_id: string | null
           status: string
           target_duration_seconds: number
           title: string
           updated_at: string
           user_id: string
+          video_requirements: string | null
+          visual_style: string | null
         }
         Insert: {
           aspect_ratio?: string
           created_at?: string
+          current_stage?: string | null
           id?: string
           idea: string
+          language?: string
+          last_error?: string | null
           skill_version_id?: string | null
           status?: string
           target_duration_seconds?: number
           title: string
           updated_at?: string
           user_id?: string
+          video_requirements?: string | null
+          visual_style?: string | null
         }
         Update: {
           aspect_ratio?: string
           created_at?: string
+          current_stage?: string | null
           id?: string
           idea?: string
+          language?: string
+          last_error?: string | null
           skill_version_id?: string | null
           status?: string
           target_duration_seconds?: number
           title?: string
           updated_at?: string
           user_id?: string
+          video_requirements?: string | null
+          visual_style?: string | null
         }
         Relationships: [
           {
@@ -272,10 +287,13 @@ export type Database = {
           created_by: string | null
           file_name: string
           id: string
+          name: string | null
           notes: string | null
           size_bytes: number
           skill_id: string
+          status: string
           storage_path: string | null
+          updated_at: string
           version: number
         }
         Insert: {
@@ -284,10 +302,13 @@ export type Database = {
           created_by?: string | null
           file_name: string
           id?: string
+          name?: string | null
           notes?: string | null
           size_bytes?: number
           skill_id: string
+          status?: string
           storage_path?: string | null
+          updated_at?: string
           version: number
         }
         Update: {
@@ -296,10 +317,13 @@ export type Database = {
           created_by?: string | null
           file_name?: string
           id?: string
+          name?: string | null
           notes?: string | null
           size_bytes?: number
           skill_id?: string
+          status?: string
           storage_path?: string | null
+          updated_at?: string
           version?: number
         }
         Relationships: [
@@ -476,6 +500,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_skill_version: {
+        Args: { _version_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

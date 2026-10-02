@@ -8,6 +8,13 @@
       "when": 1790934029334,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790934713150,
+      "tag": "0001_skill_engine_and_pipeline_states",
+      "breakpoints": true
     }
   ]
 }

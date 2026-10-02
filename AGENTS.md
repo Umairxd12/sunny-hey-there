@@ -11,9 +11,10 @@
 
 # Architecture rules
 
-- Pipeline step definitions live in `src/lib/pipeline.ts`; AI steps run only via `runPipelineStep` server fn — keeps prompts, skill content and keys server-side.
-- The active SKILL.md is loaded server-side and injected into every AI step's system prompt — never hard-code skill content in the frontend.
-- Skill versions are append-only rows in `skill_versions`; activating/restoring only changes `skills.active_version_id` — preserves full history.
-- External services (video AI, Facebook, YouTube, TikTok, analytics) implement the adapter interfaces in `src/lib/providers.ts` — lets providers be plugged in without UI rewrites.
+- Pipeline stages and the project status state machine live in `src/lib/pipeline.ts`; stages run strictly in order via `runStage` in `src/lib/ai/orchestrator.server.ts` — no stage may be skipped, and redoing a stage resets later ones.
+- Every production request is assembled by `buildProductionContext` (system instructions + active skill + project settings + request + characters + world + storyboard + video requirements) on the server — the skill never ships in frontend code.
+- Exactly one `skill_versions` row may have `status='active'` (partial unique index); activation goes through the `activate_skill_version` RPC — keeps the single-active invariant atomic.
+- Provider contracts live in `src/lib/ai/types.ts`; concrete adapters are `*.server.ts` files registered in `src/lib/ai/registry.server.ts` — external providers are preferred, the built-in Lovable AI text provider is only a fallback.
+- A stage whose provider is missing is marked `blocked` (not failed, not skipped) so the user sees exactly what to connect.
 - First signed-up user becomes admin via the `handle_new_user` trigger; roles live in `user_roles` — avoids privilege escalation.
-- All signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`.
+- `/` is the public home page; all signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`.
