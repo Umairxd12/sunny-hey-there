@@ -21,3 +21,5 @@
 - Meta prompt QA loops (analyze → fix → analyze) inside the `analysis` stage and fails the stage if it never passes; the approved meta prompt is stored before the `# QA LOG` marker — later stages read only the approved part.
 - The storyboard stage is rejected unless every second 00..duration-1 has a `SECOND NN` block — guarantees per-second coverage.
 - Video provider contracts (`src/lib/ai/types.ts`) carry modes, references, first/last frame, seed, clips and per-segment regeneration — adapters plug in without changing the orchestrator.
+- Video edits are stored as an edit list (`video_clips` trims/order/transitions/volume + `video_audio_tracks`); the final MP4 is rendered only by a connected `VideoEditingProvider` via `renderMaster` — Workers cannot run ffmpeg.
+- Publishing is never automatic unless `projects.auto_publish` is true; workspace Publish/Schedule only create draft `scheduled_posts`.

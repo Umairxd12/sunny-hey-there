@@ -140,6 +140,41 @@ export type Database = {
           },
         ]
       }
+      production_history: {
+        Row: {
+          action: string
+          created_at: string
+          detail: string | null
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          project_id: string
+          user_id?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -161,6 +196,7 @@ export type Database = {
       projects: {
         Row: {
           aspect_ratio: string
+          auto_publish: boolean
           created_at: string
           current_stage: string | null
           id: string
@@ -182,6 +218,7 @@ export type Database = {
         }
         Insert: {
           aspect_ratio?: string
+          auto_publish?: boolean
           created_at?: string
           current_stage?: string | null
           id?: string
@@ -203,6 +240,7 @@ export type Database = {
         }
         Update: {
           aspect_ratio?: string
+          auto_publish?: boolean
           created_at?: string
           current_stage?: string | null
           id?: string
@@ -465,6 +503,203 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_assets: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          metadata: Json
+          project_id: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          metadata?: Json
+          project_id: string
+          url?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          project_id?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_audio_tracks: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          project_id: string
+          start_s: number
+          url: string | null
+          user_id: string
+          volume: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label: string
+          project_id: string
+          start_s?: number
+          url?: string | null
+          user_id?: string
+          volume?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          project_id?: string
+          start_s?: number
+          url?: string | null
+          user_id?: string
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_audio_tracks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_clips: {
+        Row: {
+          created_at: string
+          from_s: number
+          id: string
+          is_deleted: boolean
+          position: number
+          project_id: string
+          prompt: string | null
+          provider_job_id: string | null
+          source: string
+          status: string
+          to_s: number
+          transition: string
+          trim_end: number
+          trim_start: number
+          updated_at: string
+          user_id: string
+          video_url: string | null
+          volume: number
+        }
+        Insert: {
+          created_at?: string
+          from_s?: number
+          id?: string
+          is_deleted?: boolean
+          position?: number
+          project_id: string
+          prompt?: string | null
+          provider_job_id?: string | null
+          source?: string
+          status?: string
+          to_s?: number
+          transition?: string
+          trim_end?: number
+          trim_start?: number
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+          volume?: number
+        }
+        Update: {
+          created_at?: string
+          from_s?: number
+          id?: string
+          is_deleted?: boolean
+          position?: number
+          project_id?: string
+          prompt?: string | null
+          provider_job_id?: string | null
+          source?: string
+          status?: string
+          to_s?: number
+          transition?: string
+          trim_end?: number
+          trim_start?: number
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_clips_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_reviews: {
+        Row: {
+          checks: Json
+          created_at: string
+          failed_segments: Json
+          id: string
+          kind: string
+          project_id: string
+          recommendations: Json
+          report: string | null
+          user_id: string
+        }
+        Insert: {
+          checks?: Json
+          created_at?: string
+          failed_segments?: Json
+          id?: string
+          kind?: string
+          project_id: string
+          recommendations?: Json
+          report?: string | null
+          user_id?: string
+        }
+        Update: {
+          checks?: Json
+          created_at?: string
+          failed_segments?: Json
+          id?: string
+          kind?: string
+          project_id?: string
+          recommendations?: Json
+          report?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       videos: {
         Row: {
