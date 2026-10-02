@@ -18,3 +18,6 @@
 - A stage whose provider is missing is marked `blocked` (not failed, not skipped) so the user sees exactly what to connect.
 - First signed-up user becomes admin via the `handle_new_user` trigger; roles live in `user_roles` — avoids privilege escalation.
 - `/` is the public home page; all signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`.
+- Meta prompt QA loops (analyze → fix → analyze) inside the `analysis` stage and fails the stage if it never passes; the approved meta prompt is stored before the `# QA LOG` marker — later stages read only the approved part.
+- The storyboard stage is rejected unless every second 00..duration-1 has a `SECOND NN` block — guarantees per-second coverage.
+- Video provider contracts (`src/lib/ai/types.ts`) carry modes, references, first/last frame, seed, clips and per-segment regeneration — adapters plug in without changing the orchestrator.
