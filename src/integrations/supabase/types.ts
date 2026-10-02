@@ -167,10 +167,14 @@ export type Database = {
           idea: string
           language: string
           last_error: string | null
+          reference_notes: string | null
           skill_version_id: string | null
           status: string
+          target_audience: string | null
           target_duration_seconds: number
+          target_platform: string | null
           title: string
+          topic: string | null
           updated_at: string
           user_id: string
           video_requirements: string | null
@@ -184,10 +188,14 @@ export type Database = {
           idea: string
           language?: string
           last_error?: string | null
+          reference_notes?: string | null
           skill_version_id?: string | null
           status?: string
+          target_audience?: string | null
           target_duration_seconds?: number
+          target_platform?: string | null
           title: string
+          topic?: string | null
           updated_at?: string
           user_id?: string
           video_requirements?: string | null
@@ -201,10 +209,14 @@ export type Database = {
           idea?: string
           language?: string
           last_error?: string | null
+          reference_notes?: string | null
           skill_version_id?: string | null
           status?: string
+          target_audience?: string | null
           target_duration_seconds?: number
+          target_platform?: string | null
           title?: string
+          topic?: string | null
           updated_at?: string
           user_id?: string
           video_requirements?: string | null
