@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { STAGES, type ProjectStatus } from "../pipeline";
-import { ProviderNotConfiguredError } from "./types";
+import { ProviderNotConfiguredError, type TextGenerationProvider } from "./types";
 import { getTextProvider, getVideoAnalysisProvider, getVideoEditingProvider, getVideoGenerationProvider } from "./registry.server";
 
 type Db = SupabaseClient<Database>;
@@ -9,15 +9,32 @@ type Project = Database["public"]["Tables"]["projects"]["Row"];
 
 const SYSTEM_INSTRUCTIONS = `You are the production engine of a professional AI 3D cartoon video studio.
 Rules: follow the ACTIVE SKILL exactly — it overrides general habits. Stay consistent with every earlier production output.
-Never invent requirements that contradict the project settings. Respond in clean Markdown.`;
+Locked character and world designs must never change. Never invent requirements that contradict the project settings. Respond in clean Markdown.`;
+
+const MAX_QA_ROUNDS = 3;
+const QA_LOG_MARKER = "\n\n---\n# QA LOG";
 
 const STAGE_TASKS: Record<string, string> = {
-  meta_prompt: "Write the MASTER META PROMPT: goal, audience, story arc, tone, characters needed, setting, duration, aspect ratio and every production constraint from the skill.",
-  analysis: "Analyze the master meta prompt end-to-end. List strengths, gaps, contradictions and risks, then output a corrected FINAL BRIEF.",
-  characters: "Create the full character design sheet for every character: name, role, body shape, face, hair, outfit, colors, personality, expressions, voice and 3D consistency rules.",
-  world: "Create the world and visual style guide: locations, time of day, lighting, color palette, materials, camera language, render style and mood.",
-  storyboard: "Create a PER-SECOND storyboard covering every second. For each second: time, shot type, camera move, characters, action, expression, background, sound/voice.",
-  final_prompt: "Write the FINAL VIDEO GENERATION PROMPT for a video AI model. It must faithfully encode characters, world style and the per-second storyboard.",
+  meta_prompt: `Write the complete MASTER META PROMPT. Use exactly these sections as level-2 headings, in this order:
+Objective, Duration, Format, Story, Character Bible, World Bible, Visual Style, Action Logic, Comedy Logic, Camera Logic, Dialogue, Audio, Music, Continuity, Negative Constraints, Final Frame, Production Requirements.
+The story must move clearly through SETUP → ACTION → COMPLICATION → PAYOFF → FINAL FRAME.`,
+  analysis_check: `Analyze the META PROMPT below end-to-end as a strict production QA reviewer. Check each item and mark it OK or PROBLEM with a one-line reason:
+Story logic, Character consistency, Environment continuity, Prop continuity, Action continuity, Camera continuity, Timing, Dialogue, Lip-sync, SFX, Music, Lighting, Colors, Animation feasibility, Video-model renderability, Comedy setup, Comedy payoff, Final-frame clarity, Generation risks.
+End with exactly one line: "VERDICT: PASS" if there are no problems, otherwise "VERDICT: FAIL".`,
+  analysis_fix: `Rewrite the META PROMPT so that every PROBLEM listed in the QA REVIEW is fixed. Keep the same section headings and everything that was already OK. Output only the full corrected meta prompt.`,
+  characters: `Create the LOCKED CHARACTER SPECIFICATION for every character. For each character use these fields:
+Species, Body, Proportions, Height, Face, Eyes, Nose, Mouth, Ears, Fur, Fur pattern, Clothing, Accessories, Colors (with hex codes), Signature features, Expressions, Personality, Movement style.
+Then add a "Visual reference prompt" (one dense paragraph to render a neutral-pose 3D reference image of the character on a plain background) and a "Consistency lock" list of details that must never change in any shot.`,
+  world: `Create the LOCKED WORLD & STYLE GUIDE with these sections:
+Environment, Location, Background, Props (with exact positions and states), Lighting, Weather, Atmosphere, Materials, Color palette (hex codes), Cinematic style, Camera style, Depth of field, Animation style.
+Finish with a "World lock" list of details that must stay identical in every shot.`,
+  storyboard: `Create the PER-SECOND STORYBOARD. Write one block for EVERY second from SECOND 00 to the final second — no gaps, no ranges.
+Each block starts with a heading "SECOND NN" (two digits) and has these fields:
+Beat (SETUP / ACTION / COMPLICATION / PAYOFF / FINAL FRAME), Visual, Character action, Expression, Camera, Environment, Prop movement, Dialogue, SFX, Music, Continuity.
+Nothing may change without a visible cause. Respect the locked character and world designs exactly.`,
+  final_prompt: `Write the FINAL VIDEO GENERATION PROMPT for an external video AI model. It must faithfully implement the per-second storyboard.
+Sections: Global prompt (style, characters, world — copied from the locks), Shot list (time range → exact visual/camera/action/audio), Negative prompt, Consistency notes.
+Then add a "CLIPS" section that splits the video into clips of at most 8 seconds each, formatted as lines: "CLIP n | from-to | prompt".`,
   metadata: "Write social metadata for Facebook, YouTube and TikTok: title, description, short caption and 10-15 hashtags each.",
 };
 
@@ -27,12 +44,17 @@ export async function loadActiveSkill(): Promise<{ id: string; name: string | nu
   return data ?? null;
 }
 
+/** The approved meta prompt without the QA log. */
+const approvedMeta = (outputs: Record<string, string>) => (outputs["analysis"] ?? outputs["meta_prompt"])?.split(QA_LOG_MARKER)[0];
+
 /** Assembles the full layered context every production request receives. */
 export function buildProductionContext(args: {
   skill: { name: string | null; version: number; content: string };
   project: Project;
   outputs: Record<string, string>;
   stageKey: string;
+  task?: string | undefined;
+  extra?: string | undefined;
 }) {
   const { skill, project, outputs, stageKey } = args;
   const section = (title: string, body?: string | null) => `## ${title}\n${body?.trim() ? body.trim() : "(not available yet)"}`;
@@ -40,19 +62,76 @@ export function buildProductionContext(args: {
     SYSTEM_INSTRUCTIONS,
     `=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`,
   ].join("\n\n");
+  const settings = [
+    `Title: ${project.title}`,
+    `Topic: ${project.topic ?? "—"}`,
+    `Duration: ${project.target_duration_seconds} seconds (seconds 00 to ${String(project.target_duration_seconds - 1).padStart(2, "0")})`,
+    `Aspect ratio: ${project.aspect_ratio}`,
+    `Target platform: ${project.target_platform ?? "—"}`,
+    `Target audience: ${project.target_audience ?? "—"}`,
+    `Language: ${project.language}`,
+    `Visual style notes: ${project.visual_style ?? "—"}`,
+  ].join("\n");
   const prompt = [
-    section("PROJECT SETTINGS", `Title: ${project.title}\nDuration: ${project.target_duration_seconds} seconds\nAspect ratio: ${project.aspect_ratio}\nLanguage: ${project.language}\nVisual style notes: ${project.visual_style ?? "—"}`),
+    section("PROJECT SETTINGS", settings),
     section("USER VIDEO REQUEST", project.idea),
-    section("META PROMPT (ANALYZED)", outputs["analysis"] ?? outputs["meta_prompt"]),
-    section("CHARACTER REFERENCES", outputs["characters"]),
-    section("WORLD REFERENCES", outputs["world"]),
+    section("REFERENCES", project.reference_notes),
+    section("META PROMPT (APPROVED)", approvedMeta(outputs)),
+    section("CHARACTER REFERENCES (LOCKED)", outputs["characters"]),
+    section("WORLD REFERENCES (LOCKED)", outputs["world"]),
     section("STORYBOARD", outputs["storyboard"]),
     section("VIDEO REQUIREMENTS", project.video_requirements),
     section("FINAL VIDEO PROMPT", outputs["final_prompt"]),
     section("QA REPORT", outputs["final_qa"]),
-    `## CURRENT TASK\n${STAGE_TASKS[stageKey] ?? ""}`,
+    ...(args.extra ? [args.extra] : []),
+    `## CURRENT TASK\n${args.task ?? STAGE_TASKS[stageKey] ?? ""}`,
   ].join("\n\n");
   return { system, prompt };
+}
+
+/** Seconds missing from a per-second storyboard. */
+export function missingSeconds(storyboard: string, duration: number): number[] {
+  const found = new Set([...storyboard.matchAll(/SECOND\s+(\d{1,3})/gi)].map((m) => Number(m[1])));
+  return Array.from({ length: duration }, (_, i) => i).filter((s) => !found.has(s));
+}
+
+type Ctx = { skill: { name: string | null; version: number; content: string }; project: Project; outputs: Record<string, string> };
+
+async function runTextStage(provider: TextGenerationProvider, stageKey: string, c: Ctx): Promise<string> {
+  const ask = async (task?: string, extra?: string) => {
+    const { system, prompt } = buildProductionContext({ ...c, stageKey, task, extra });
+    return (await provider.generate({ system, prompt })).text;
+  };
+
+  // META PROMPT → ANALYZE → FIX → ANALYZE AGAIN, until it passes QA.
+  if (stageKey === "analysis") {
+    let meta = c.outputs["meta_prompt"] ?? "";
+    const log: string[] = [];
+    for (let round = 1; round <= MAX_QA_ROUNDS; round++) {
+      const review = await ask(STAGE_TASKS["analysis_check"], `## META PROMPT UNDER REVIEW\n${meta}`);
+      const pass = /VERDICT:\s*PASS/i.test(review);
+      log.push(`## Round ${round} — ${pass ? "PASS" : "FAIL"}\n${review}`);
+      if (pass) return `${meta}${QA_LOG_MARKER}\n\n${log.join("\n\n")}`;
+      if (round === MAX_QA_ROUNDS) break;
+      meta = await ask(STAGE_TASKS["analysis_fix"], `## META PROMPT UNDER REVIEW\n${meta}\n\n## QA REVIEW\n${review}`);
+    }
+    throw new Error(`The meta prompt did not pass QA after ${MAX_QA_ROUNDS} fix rounds. Edit the idea or redo the meta prompt.`);
+  }
+
+  // Storyboard must cover every single second.
+  if (stageKey === "storyboard") {
+    const duration = c.project.target_duration_seconds;
+    let board = await ask();
+    let missing = missingSeconds(board, duration);
+    if (missing.length) {
+      board = await ask(undefined, `## PREVIOUS ATTEMPT WAS INCOMPLETE\nThese seconds were missing: ${missing.join(", ")}. Write the full storyboard again with every second from 00 to ${duration - 1}.`);
+      missing = missingSeconds(board, duration);
+    }
+    if (missing.length) throw new Error(`The storyboard is missing seconds ${missing.join(", ")}. Please redo the storyboard.`);
+    return board;
+  }
+
+  return ask();
 }
 
 export type StageResult = { ok: true } | { ok: false; error: string; blocked?: boolean };
@@ -102,11 +181,8 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
     if (stage.capability === "text") {
       const provider = getTextProvider();
       if (!provider) throw new ProviderNotConfiguredError("text");
-      const outputs = Object.fromEntries(doneMap);
-      const { system, prompt } = buildProductionContext({ skill, project, outputs, stageKey });
-      const r = await provider.generate({ system, prompt });
-      output = r.text;
-      model = `${provider.name} · ${r.model}`;
+      output = await runTextStage(provider, stageKey, { skill, project, outputs: Object.fromEntries(doneMap) });
+      model = provider.name;
     } else {
       const provider =
         stage.capability === "video_generation" ? getVideoGenerationProvider()
@@ -128,4 +204,19 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
     if (e instanceof ProviderNotConfiguredError) return fail(e.message, true);
     return fail(e instanceof Error ? e.message : "Something went wrong.");
   }
+}
+
+/** Suggests video ideas from the active skill when the user has none. */
+export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }) {
+  const skill = await loadActiveSkill();
+  if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
+  const provider = getTextProvider();
+  if (!provider) throw new ProviderNotConfiguredError("text");
+  const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
+  const prompt = `Suggest 5 short 3D cartoon video ideas that follow the active skill.
+Topic: ${input.topic || "any"} | Platform: ${input.platform || "any"} | Audience: ${input.audience || "general"} | Duration: ${input.duration}s | Language: ${input.language}
+Output exactly 5 lines, no numbering, no extra text, each formatted as: Title :: one or two sentence idea with setup, complication and payoff.`;
+  const { text } = await provider.generate({ system, prompt });
+  return text.split("\n").map((l) => l.replace(/^[\s\-*\d.)]+/, "").trim()).filter((l) => l.includes("::")).slice(0, 5)
+    .map((l) => { const [title, ...rest] = l.split("::"); return { title: title!.trim().replace(/\*+/g, ""), idea: rest.join("::").trim() }; });
 }

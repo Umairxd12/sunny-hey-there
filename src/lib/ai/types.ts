@@ -15,17 +15,65 @@ export interface VisionProvider extends AIProvider {
   describeImage(input: { imageUrl: string; instruction: string }): Promise<{ text: string }>;
 }
 
+/** One clip of a multi-clip generation; times are in seconds of the final video. */
+export interface ClipRequest {
+  index: number;
+  from: number;
+  to: number;
+  prompt: string;
+}
+
+export interface VideoGenerationInput {
+  mode: "text_to_video" | "image_to_video";
+  prompt: string;
+  negativePrompt?: string;
+  durationSeconds: number;
+  aspectRatio: string;
+  /** Character / world reference images (locked designs). */
+  referenceImageUrls?: string[];
+  firstFrameUrl?: string;
+  lastFrameUrl?: string;
+  /** Seed for consistency, where the provider supports it. */
+  seed?: number;
+  /** When set, the provider generates these clips separately for later assembly. */
+  clips?: ClipRequest[];
+}
+
 export interface VideoGenerationProvider extends AIProvider {
-  submit(input: { prompt: string; durationSeconds: number; aspectRatio: string }): Promise<{ jobId: string }>;
+  supports: { imageToVideo: boolean; referenceImages: boolean; firstLastFrame: boolean; seed: boolean; maxClipSeconds: number };
+  submit(input: VideoGenerationInput): Promise<{ jobIds: string[] }>;
   poll(jobId: string): Promise<{ status: "queued" | "running" | "succeeded" | "failed"; videoUrl?: string; error?: string }>;
 }
 
+export type DefectKind =
+  | "character_inconsistency" | "bad_animation" | "broken_object" | "wrong_camera" | "missing_scene"
+  | "wrong_timing" | "bad_expression" | "lip_sync" | "audio" | "visual_artifact" | "wrong_ending";
+
+export interface FailedSegment {
+  from: number;
+  to: number;
+  clipIndex?: number;
+  kind: DefectKind;
+  reason: string;
+}
+
 export interface VideoAnalysisProvider extends AIProvider {
-  analyze(input: { videoUrl: string; storyboard: string; instruction: string }): Promise<{ report: string; failedSegments: { from: number; to: number; reason: string }[] }>;
+  /** Compares a video against meta prompt, character, world, per-second storyboard and final prompt. */
+  analyze(input: {
+    videoUrl: string;
+    metaPrompt: string;
+    characters: string;
+    world: string;
+    storyboard: string;
+    finalPrompt: string;
+    instruction: string;
+  }): Promise<{ report: string; passed: boolean; failedSegments: FailedSegment[] }>;
 }
 
 export interface VideoEditingProvider extends AIProvider {
-  edit(input: { videoUrl: string; instructions: string }): Promise<{ jobId: string }>;
+  /** Regenerates only the failed segments, then assembles the corrected clips. */
+  regenerateSegments(input: { segments: (FailedSegment & { prompt: string })[]; clipUrls: string[] }): Promise<{ jobIds: string[] }>;
+  assemble(input: { clipUrls: string[] }): Promise<{ jobId: string }>;
 }
 
 export class ProviderNotConfiguredError extends Error {

@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { suggestVideoIdeas } from "@/lib/pipeline.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/create")({
@@ -15,23 +18,52 @@ export const Route = createFileRoute("/_authenticated/create")({
   component: CreateVideo,
 });
 
+const PLATFORMS: Record<string, string> = { tiktok: "9:16", youtube_shorts: "9:16", facebook_reels: "9:16", youtube: "16:9", facebook: "1:1" };
+const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", youtube_shorts: "YouTube Shorts", facebook_reels: "Facebook Reels", youtube: "YouTube (wide)", facebook: "Facebook feed" };
+
 function CreateVideo() {
   const navigate = useNavigate();
+  const suggest = useServerFn(suggestVideoIdeas);
   const [title, setTitle] = useState("");
+  const [topic, setTopic] = useState("");
   const [idea, setIdea] = useState("");
-  const [duration, setDuration] = useState("30");
+  const [duration, setDuration] = useState("15");
+  const [platform, setPlatform] = useState("tiktok");
   const [ratio, setRatio] = useState("9:16");
-  const [busy, setBusy] = useState(false);
   const [language, setLanguage] = useState("English");
+  const [audience, setAudience] = useState("");
+  const [refs, setRefs] = useState("");
   const [style, setStyle] = useState("");
   const [reqs, setReqs] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [ideasBusy, setIdeasBusy] = useState(false);
+  const [ideas, setIdeas] = useState<{ title: string; idea: string }[]>([]);
+
+  async function getIdeas() {
+    setIdeasBusy(true);
+    try {
+      const res = await suggest({ data: { topic: topic || undefined, platform: PLATFORM_LABEL[platform], audience: audience || undefined, duration: Number(duration), language } });
+      if (!res.ok) toast.error(res.error);
+      else if (!res.ideas.length) toast.error("No ideas came back. Please try again.");
+      else setIdeas(res.ideas);
+    } catch {
+      toast.error("Could not suggest ideas. Please try again.");
+    } finally {
+      setIdeasBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!idea.trim()) { toast.error("Write an idea or pick a suggested one."); return; }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase.from("projects")
-      .insert({ title, idea, target_duration_seconds: Number(duration), aspect_ratio: ratio, language, visual_style: style || null, video_requirements: reqs || null, user_id: u.user!.id })
+      .insert({
+        title, idea, topic: topic || null, target_duration_seconds: Number(duration), aspect_ratio: ratio,
+        target_platform: PLATFORM_LABEL[platform] ?? platform, target_audience: audience || null, reference_notes: refs || null,
+        language, visual_style: style || null, video_requirements: reqs || null, user_id: u.user!.id,
+      })
       .select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "Could not create project"); return; }
@@ -40,22 +72,46 @@ function CreateVideo() {
 
   return (
     <>
-      <PageHeader title="Create video" description="Describe your idea. The studio then walks it through every production step." />
+      <PageHeader title="Create video" description="Step 1 — describe your idea. The studio then walks it through every production step." />
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
-        <div className="space-y-1.5"><Label htmlFor="i">Video idea</Label><Textarea id="i" required rows={5} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="A tiny robot learns to share its umbrella during a rainy day in a candy-colored city…" /></div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5"><Label>Length</Label>
             <Select value={duration} onValueChange={setDuration}><SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{["8", "15", "30", "60"].map((d) => <SelectItem key={d} value={d}>{d} seconds</SelectItem>)}</SelectContent></Select></div>
+              <SelectContent>{["8", "10", "15", "20", "30", "60"].map((d) => <SelectItem key={d} value={d}>{d} seconds</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label>Platform</Label>
+            <Select value={platform} onValueChange={(v) => { setPlatform(v); setRatio(PLATFORMS[v] ?? ratio); }}><SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{Object.entries(PLATFORM_LABEL).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent></Select></div>
           <div className="space-y-1.5"><Label>Format</Label>
             <Select value={ratio} onValueChange={setRatio}><SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="9:16">Vertical 9:16 (Shorts, TikTok, Reels)</SelectItem><SelectItem value="16:9">Wide 16:9 (YouTube)</SelectItem><SelectItem value="1:1">Square 1:1</SelectItem></SelectContent></Select></div>
+              <SelectContent><SelectItem value="9:16">Vertical 9:16</SelectItem><SelectItem value="16:9">Wide 16:9</SelectItem><SelectItem value="1:1">Square 1:1</SelectItem></SelectContent></Select></div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="lang">Language</Label><Input id="lang" value={language} onChange={(e) => setLanguage(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label htmlFor="sty">Visual style notes (optional)</Label><Input id="sty" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="Pixar-like, soft pastel lighting" /></div>
+          <div className="space-y-1.5"><Label htmlFor="aud">Target audience</Label><Input id="aud" value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="Kids 4–8, families" /></div>
         </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="i">Video idea</Label>
+            <Button type="button" size="sm" variant="outline" onClick={getIdeas} disabled={ideasBusy}>
+              {ideasBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Suggest ideas
+            </Button>
+          </div>
+          <Textarea id="i" rows={5} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="A tiny robot learns to share its umbrella during a rainy day in a candy-colored city…" />
+          {ideas.length > 0 && (
+            <div className="grid gap-2 pt-1">
+              {ideas.map((s) => (
+                <button key={s.title} type="button" onClick={() => { setIdea(s.idea); if (!title) setTitle(s.title); }}
+                  className="rounded-xl border bg-background p-3 text-left text-sm transition-colors hover:border-primary">
+                  <span className="font-medium">{s.title}</span><span className="block text-muted-foreground">{s.idea}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="space-y-1.5"><Label htmlFor="refs">References (optional)</Label><Textarea id="refs" rows={2} value={refs} onChange={(e) => setRefs(e.target.value)} placeholder="Links or notes: a character you like, a scene, a mood…" /></div>
+        <div className="space-y-1.5"><Label htmlFor="sty">Visual style notes (optional)</Label><Input id="sty" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="Pixar-like, soft pastel lighting" /></div>
         <div className="space-y-1.5"><Label htmlFor="req">Video requirements (optional)</Label><Textarea id="req" rows={3} value={reqs} onChange={(e) => setReqs(e.target.value)} placeholder="No text on screen, end with a logo shot, kid-safe…" /></div>
         <Button disabled={busy}>{busy ? "Creating…" : "Create project"}</Button>
       </form>
