@@ -18,18 +18,21 @@ export interface StageDef {
 
 /** Ordered stages. Every stage must complete before the next one may run — no skipping. */
 export const STAGES: StageDef[] = [
-  { key: "meta_prompt", label: "Meta prompt", description: "Turns the idea into a complete production brief using the active skill.", status: "META_PROMPT", capability: "text" },
-  { key: "analysis", label: "Meta prompt analysis", description: "Checks the brief end-to-end and produces a corrected final brief.", status: "ANALYZING", capability: "text" },
-  { key: "characters", label: "Character creation", description: "Designs every character: look, personality, outfit, voice.", status: "CHARACTER_DESIGN", capability: "text" },
-  { key: "world", label: "World & style", description: "Setting, lighting, palette and 3D cartoon render style.", status: "WORLD_DESIGN", capability: "text" },
-  { key: "storyboard", label: "Storyboard", description: "Second-by-second shots, camera, action and audio.", status: "STORYBOARD", capability: "text" },
-  { key: "final_prompt", label: "Final video prompt", description: "The exact prompt sent to the video provider.", status: "VIDEO_PROMPT", capability: "text" },
-  { key: "generate_video", label: "Video generation", description: "Sends the final prompt to your video provider.", status: "GENERATING", capability: "video_generation" },
-  { key: "video_analysis", label: "Video analysis", description: "Compares the video to the storyboard, second by second.", status: "REVIEWING", capability: "video_analysis" },
-  { key: "editing", label: "Editing instructions", description: "Fixes or regenerates the parts that failed review.", status: "EDITING", capability: "video_editing" },
-  { key: "final_qa", label: "Final QA", description: "Final quality check of the finished video.", status: "FINAL_QA", capability: "video_analysis" },
+  { key: "meta_prompt", label: "Meta prompt", description: "Full brief: objective, story, character & world bible, camera, comedy, audio, continuity, final frame.", status: "META_PROMPT", capability: "text" },
+  { key: "analysis", label: "Meta prompt QA", description: "Checks 19 points end-to-end, fixes problems and checks again until it passes.", status: "ANALYZING", capability: "text" },
+  { key: "characters", label: "Character design", description: "Locked character sheet: body, face, fur, clothing, colors, expressions, movement.", status: "CHARACTER_DESIGN", capability: "text" },
+  { key: "world", label: "World & style", description: "Locked world: location, props, lighting, palette, camera and animation style.", status: "WORLD_DESIGN", capability: "text" },
+  { key: "storyboard", label: "Per-second storyboard", description: "One block for every second: setup, action, complication, payoff, final frame.", status: "STORYBOARD", capability: "text" },
+  { key: "final_prompt", label: "Final video prompt", description: "The exact prompt and clip list sent to the video provider, built from the storyboard.", status: "VIDEO_PROMPT", capability: "text" },
+  { key: "generate_video", label: "Video generation", description: "Sends prompt, character and world references to your video provider, clip by clip.", status: "GENERATING", capability: "video_generation" },
+  { key: "video_analysis", label: "Video analysis", description: "Compares the video to the meta prompt, designs and storyboard, second by second.", status: "REVIEWING", capability: "video_analysis" },
+  { key: "editing", label: "Edit / regenerate", description: "Regenerates only the failed parts, then joins the corrected clips.", status: "EDITING", capability: "video_editing" },
+  { key: "final_qa", label: "Final QA", description: "Final check. The video is only completed when it passes.", status: "FINAL_QA", capability: "video_analysis" },
   { key: "metadata", label: "Metadata", description: "Title, description, caption and hashtags per platform.", status: "COMPLETED", capability: "text" },
 ];
+
+/** Stages whose result is locked once done — later stages must follow it exactly. */
+export const LOCKED_STAGES = new Set(["characters", "world"]);
 
 export const STAGE_KEYS = STAGES.map((s) => s.key);
 
