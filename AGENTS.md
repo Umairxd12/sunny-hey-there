@@ -23,3 +23,9 @@
 - Video provider contracts (`src/lib/ai/types.ts`) carry modes, references, first/last frame, seed, clips and per-segment regeneration — adapters plug in without changing the orchestrator.
 - Video edits are stored as an edit list (`video_clips` trims/order/transitions/volume + `video_audio_tracks`); the final MP4 is rendered only by a connected `VideoEditingProvider` via `renderMaster` — Workers cannot run ffmpeg.
 - Publishing is never automatic unless `projects.auto_publish` is true; workspace Publish/Schedule only create draft `scheduled_posts`.
+- Automated publishing runs only through `processDuePosts` (`src/lib/automation/automation.server.ts`), called by the `/api/public/hooks/publish-due` route (verified with the `internal_config.cron_secret` header) — single-flight `job_locks`, per-post `claim_scheduled_post`, bounded batch.
+- A post that has an `external_post_id` is never re-published, and interrupted publishes without one become FAILED instead of auto-retrying — prevents duplicate posts.
+- `scheduled_posts.idempotency_key` (project:video:account) is unique — a completed project can't queue the same post twice.
+- The `publish-due-posts` pg_cron job is created by a trigger when posts are queued and removed by `stop_publish_cron_if_idle` once the queue drains — no permanent polling.
+- Emergency stop (`automation_settings.emergency_stop`) is checked per post right before publishing; it never touches already-published posts.
+- Completed projects queue posts via `queueCompletedProject`: READY when auto-publish is off (or emergency stop is on), SCHEDULED at the next slot from `nextSlot` (`src/lib/automation/schedule.ts`) otherwise.
