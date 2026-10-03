@@ -91,6 +91,52 @@ export const delegateFullPipeline = createServerFn({ method: "POST" })
   });
 
 /**
+ * Permanently deletes a project. All project FKs are ON DELETE CASCADE, so
+ * pipeline_steps, clips, assets, videos, posts, etc. are cleared with it.
+ */
+export const deleteProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    const { error } = await db.from("projects").delete().eq("id", data.projectId);
+    if (error) return { ok: false as const, error: error.message };
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "production", level: "warning", event: "Project deleted", detail: project.title });
+    return { ok: true as const };
+  });
+
+/**
+ * Resets a project back to DRAFT: clears every pipeline step, clip, asset,
+ * review and unsent post so the whole flow can run again cleanly.
+ * Title, idea and settings are kept.
+ */
+export const resetProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    const RESET_TABLES = ["pipeline_steps", "characters", "storyboards", "videos", "video_clips", "video_assets", "video_audio_tracks", "video_reviews", "production_history", "automation_jobs"] as const;
+    for (const table of RESET_TABLES) {
+      const { error } = await db.from(table).delete().eq("project_id", data.projectId);
+      if (error) return { ok: false as const, error: error.message };
+    }
+    const { error: postErr } = await db.from("scheduled_posts").delete().eq("project_id", data.projectId).is("external_post_id", null);
+    if (postErr) return { ok: false as const, error: postErr.message };
+    const { error: pErr } = await db.from("projects")
+      .update({ status: "DRAFT", current_stage: null, last_error: null, updated_at: new Date().toISOString() })
+      .eq("id", data.projectId);
+    if (pErr) return { ok: false as const, error: pErr.message };
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "production", level: "info", projectId: data.projectId, event: "Project reset", detail: `${project.title} — dobara banane ke liye tayyar.` });
+    return { ok: true as const };
+  });
+
+/**
  * Hands the generate_video stage to the external video worker (the studio's own
  * render pipeline) when no video generation provider is connected. The worker
  * picks the job up from /api/public/hooks/video-jobs and reports back there.

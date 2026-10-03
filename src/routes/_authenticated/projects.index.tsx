@@ -26,11 +26,12 @@ function Projects() {
       ) : (
         <div className="rounded-2xl border bg-card">
           <Table>
-            <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Length</TableHead><TableHead>Format</TableHead><TableHead>Status</TableHead><TableHead>Updated</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Platform</TableHead><TableHead>Length</TableHead><TableHead>Format</TableHead><TableHead>Status</TableHead><TableHead>Updated</TableHead></TableRow></TableHeader>
             <TableBody>
               {data.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell><Link to="/projects/$projectId" params={{ projectId: p.id }} className="font-medium hover:text-primary">{p.title}</Link></TableCell>
+                  <TableCell>{p.target_platform ?? "—"}</TableCell>
                   <TableCell>{p.target_duration_seconds}s</TableCell><TableCell>{p.aspect_ratio}</TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                   <TableCell className="text-muted-foreground">{new Date(p.updated_at).toLocaleDateString()}</TableCell>

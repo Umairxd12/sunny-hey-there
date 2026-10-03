@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader } from "@/components/studio/ui";
+import { PageHeader, RouteErrorFallback } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/create")({
   head: () => pageHead("Create Video", "Start a new 3D cartoon video from an idea."),
+  errorComponent: RouteErrorFallback,
   component: CreateVideo,
 });
 

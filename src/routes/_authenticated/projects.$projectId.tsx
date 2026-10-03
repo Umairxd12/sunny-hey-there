@@ -1,22 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Check, ChevronDown, Loader2, Lock, Play, RotateCcw, Wand2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Loader2, Lock, Play, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, StatusBadge } from "@/components/studio/ui";
+import { PageHeader, RouteErrorFallback, StatusBadge } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LOCKED_STAGES, STAGES, nextRunnableIndex } from "@/lib/pipeline";
-import { delegateFullPipeline, delegateVideoToWorker, runPipelineStep } from "@/lib/pipeline.functions";
+import { delegateFullPipeline, delegateVideoToWorker, deleteProject, resetProject, runPipelineStep } from "@/lib/pipeline.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   validateSearch: (search: Record<string, unknown>): { autostart?: "1" } =>
     search["autostart"] === "1" ? { autostart: "1" } : {},
   head: () => pageHead("Production", "Step-by-step production pipeline for a video."),
+  errorComponent: RouteErrorFallback,
   component: ProjectPage,
 });
 
@@ -24,11 +25,15 @@ function ProjectPage() {
   const { projectId } = Route.useParams();
   const { autostart } = Route.useSearch();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const run = useServerFn(runPipelineStep);
   const delegate = useServerFn(delegateVideoToWorker);
   const delegateFull = useServerFn(delegateFullPipeline);
+  const delProject = useServerFn(deleteProject);
+  const resetProj = useServerFn(resetProject);
   const [running, setRunning] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const autoStarted = useRef(false);
 
   const { data } = useQuery({
@@ -102,10 +107,50 @@ function ProjectPage() {
     }
   }, [autostart, data?.project]);
 
+  /** Start over: clears all stages, clips and results so the flow can run again cleanly. */
+  async function recreate() {
+    if (!window.confirm("Dobara banao? Is project ke saare stages, clips aur results clear ho jayenge — title aur idea wahi rahenge.")) return;
+    setActionBusy(true);
+    try {
+      const res = await resetProj({ data: { projectId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success("Project reset ho gaya — ab dobara generate karo.");
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  /** Permanently deletes the project and everything in it. */
+  async function remove() {
+    if (!window.confirm("Project delete karna hai? Ye hamesha ke liye chala jayega — video, clips, sab kuch.")) return;
+    setActionBusy(true);
+    try {
+      const res = await delProject({ data: { projectId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success("Project delete ho gaya.");
+      navigate({ to: "/projects" });
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      setActionBusy(false);
+    }
+  }
+
   return (
     <>
       <PageHeader title={project.title} description={project.idea}
-        action={<div className="flex gap-2"><Button asChild><Link to="/workspace/$projectId" params={{ projectId }}>Open video workspace</Link></Button><Button variant="outline" asChild><Link to="/projects">All projects</Link></Button></div>} />
+        action={<div className="flex flex-wrap gap-2">
+          <Button asChild><Link to="/workspace/$projectId" params={{ projectId }}>Open video workspace</Link></Button>
+          <Button variant="outline" asChild><Link to="/projects">All projects</Link></Button>
+          <Button variant="outline" disabled={actionBusy} onClick={recreate}>
+            {actionBusy ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}Dobara banao
+          </Button>
+          <Button variant="destructive" disabled={actionBusy} onClick={remove}>
+            <Trash2 className="size-4" />Delete
+          </Button>
+        </div>} />
       <div className="mb-6 rounded-2xl border bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2 font-medium">Current status <StatusBadge status={project.status} /></span>
@@ -196,8 +241,17 @@ function ProjectPage() {
                 </div>
                 {st?.output && (
                   <CollapsibleContent>
-                    {st.model && <div className="border-t px-5 pt-3 text-xs text-muted-foreground">Made with {st.model}</div>}
-                    <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap bg-muted/40 p-5 font-sans text-sm leading-relaxed">{st.output}</pre>
+                    <div className="border-t px-5 py-4">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        {st.model && <span>Made with {st.model}</span>}
+                        {st.finished_at && <span>Finished {new Date(st.finished_at).toLocaleString()}</span>}
+                        <span>{String(st.output).length.toLocaleString()} characters</span>
+                      </div>
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm font-medium text-primary">Poora text dekho</summary>
+                        <pre className="mt-2 max-h-[480px] overflow-auto whitespace-pre-wrap rounded-xl bg-muted/40 p-4 font-sans text-sm leading-relaxed">{String(st.output)}</pre>
+                      </details>
+                    </div>
                   </CollapsibleContent>
                 )}
               </Collapsible>
