@@ -118,7 +118,13 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
 
         const stageSchema = z.record(z.string(), z.string().max(60000));
         const bodySchema = z.object({
-          projectId: z.string().uuid(),
+          projectId: z.string().uuid().optional(),
+          // Release a stuck claim back to "queued" (e.g. claimed by a debugging
+          // poll or a dead worker). Single: { projectId, releaseClaim: true }.
+          // Bulk: { releaseRecentClaims: "<ISO>" } releases full_pipeline
+          // "running" claims with started_at after the given time.
+          releaseClaim: z.boolean().optional(),
+          releaseRecentClaims: z.string().datetime().optional(),
           // Text/production stage outputs (meta_prompt, analysis, characters,
           // world, storyboard, final_prompt, video_analysis, editing, final_qa,
           // metadata). The worker may send these first, then the video later.
@@ -140,11 +146,27 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
         const parsed = bodySchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return Response.json({ ok: false, error: "Invalid payload." }, { status: 400 });
         const b = parsed.data;
+        const now = new Date().toISOString();
 
+        // 0) Release claims back to "queued".
+        if (b.releaseRecentClaims) {
+          const { data: released } = await db.from("pipeline_steps")
+            .update({ status: "queued", error: "Claim released — back in the queue.", finished_at: null }, { count: "exact" })
+            .eq("step_key", "full_pipeline").eq("status", "running").gt("started_at", b.releaseRecentClaims)
+            .select("project_id");
+          return Response.json({ ok: true, released: (released ?? []).map((r: any) => r.project_id) });
+        }
+
+        if (!b.projectId) return Response.json({ ok: false, error: "projectId is required." }, { status: 400 });
         const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", b.projectId).single();
         if (!project) return Response.json({ ok: false, error: "Project not found." }, { status: 404 });
 
-        const now = new Date().toISOString();
+        if (b.releaseClaim) {
+          await db.from("pipeline_steps")
+            .update({ status: "queued", error: "Claim released — back in the queue.", finished_at: null })
+            .eq("project_id", b.projectId).eq("step_key", "full_pipeline").eq("status", "running");
+          return Response.json({ ok: true, released: true });
+        }
         const finish = (step_key: string, output: string) =>
           db.from("pipeline_steps").upsert(
             { project_id: b.projectId, user_id: project.user_id, step_key, status: "done", output, error: null, finished_at: now },
