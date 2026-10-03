@@ -2,7 +2,8 @@
 export type SocialPlatform = "facebook" | "youtube" | "tiktok";
 export const PLATFORMS: SocialPlatform[] = ["facebook", "youtube", "tiktok"];
 
-export const NOT_AVAILABLE = "Not available through the current official API.";
+export const NOT_AVAILABLE = "Not supported by the current official API.";
+export const CONNECT_TO_ENABLE = "Connect this platform to enable this feature.";
 
 export class CapabilityNotAvailableError extends Error {
   constructor(detail?: string) { super(detail ? `${NOT_AVAILABLE} ${detail}` : NOT_AVAILABLE); }

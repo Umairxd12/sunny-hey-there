@@ -57,6 +57,13 @@
       "when": 1791036110816,
       "tag": "0007_analytics_and_earnings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791036857692,
+      "tag": "0008_automation_jobs_and_activity_log",
+      "breakpoints": true
     }
   ]
 }

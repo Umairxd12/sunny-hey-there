@@ -34,6 +34,44 @@ export const STAGES: StageDef[] = [
 /** Stages whose result is locked once done — later stages must follow it exactly. */
 export const LOCKED_STAGES = new Set(["characters", "world"]);
 
+/** Activity log wording when a stage finishes. */
+export const STAGE_DONE_EVENT: Record<string, string> = {
+  meta_prompt: "Meta prompt created", analysis: "Meta prompt passed QA", characters: "Character created",
+  world: "World & style locked", storyboard: "Storyboard completed", final_prompt: "Final video prompt ready",
+  generate_video: "Video generated", video_analysis: "Video QA completed", editing: "Edits applied",
+  final_qa: "Final video approved", metadata: "Title, caption & hashtags written",
+};
+
+/** Simple board columns for the dashboard. Each project status maps to exactly one column. */
+export const BOARD_COLUMNS = [
+  { key: "idea", label: "Idea" },
+  { key: "meta", label: "Meta prompt" },
+  { key: "character", label: "Character" },
+  { key: "storyboard", label: "Storyboard" },
+  { key: "generating", label: "Generating" },
+  { key: "reviewing", label: "Reviewing" },
+  { key: "editing", label: "Editing" },
+  { key: "completed", label: "Completed" },
+  { key: "published", label: "Published" },
+] as const;
+export type BoardColumn = (typeof BOARD_COLUMNS)[number]["key"];
+
+const STATUS_COLUMN: Record<ProjectStatus, BoardColumn> = {
+  DRAFT: "idea", META_PROMPT: "meta", ANALYZING: "meta", CHARACTER_DESIGN: "character", WORLD_DESIGN: "character",
+  STORYBOARD: "storyboard", VIDEO_PROMPT: "storyboard", GENERATING: "generating", REGENERATING: "generating",
+  REVIEWING: "reviewing", FINAL_QA: "reviewing", EDITING: "editing", COMPLETED: "completed", FAILED: "idea",
+};
+
+/** Failed projects stay in the column of the stage that failed. */
+export function boardColumnFor(status: string, currentStage: string | null, published: boolean): BoardColumn {
+  if (status === "COMPLETED") return published ? "published" : "completed";
+  if (status === "FAILED") {
+    const st = STAGES.find((s) => s.key === currentStage)?.status;
+    return st && st !== "COMPLETED" ? STATUS_COLUMN[st] : st === "COMPLETED" ? "reviewing" : "idea";
+  }
+  return STATUS_COLUMN[status as ProjectStatus] ?? "idea";
+}
+
 export const STAGE_KEYS = STAGES.map((s) => s.key);
 
 export const STATUS_LABEL: Record<ProjectStatus, string> = {
