@@ -28,6 +28,7 @@ import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedWorkspaceProjectIdRouteImport } from './routes/_authenticated/workspace.$projectId'
 import { Route as ApiPublicHooksPublishDueRouteImport } from './routes/api/public/hooks/publish-due'
+import { Route as ApiPublicHooksSyncAnalyticsRouteImport } from './routes/api/public/hooks/sync-analytics'
 import { Route as ApiPublicOauthPlatformCallbackRouteImport } from './routes/api/public/oauth.$platform.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -129,6 +130,12 @@ const ApiPublicHooksPublishDueRoute =
     path: '/api/public/hooks/publish-due',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncAnalyticsRoute =
+  ApiPublicHooksSyncAnalyticsRouteImport.update({
+    id: '/api/public/hooks/sync-analytics',
+    path: '/api/public/hooks/sync-analytics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOauthPlatformCallbackRoute =
   ApiPublicOauthPlatformCallbackRouteImport.update({
     id: '/api/public/oauth/$platform/callback',
@@ -155,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
+  '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -176,6 +184,7 @@ export interface FileRoutesByTo {
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
+  '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesById {
@@ -199,6 +208,7 @@ export interface FileRoutesById {
   '/_authenticated/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
+  '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRouteTypes {
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/workspace/$projectId'
     | '/projects/'
     | '/api/public/hooks/publish-due'
+    | '/api/public/hooks/sync-analytics'
     | '/api/public/oauth/$platform/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/workspace/$projectId'
     | '/projects'
     | '/api/public/hooks/publish-due'
+    | '/api/public/hooks/sync-analytics'
     | '/api/public/oauth/$platform/callback'
   id:
     | '__root__'
@@ -265,6 +277,7 @@ export interface FileRouteTypes {
     | '/_authenticated/workspace/$projectId'
     | '/_authenticated/projects/'
     | '/api/public/hooks/publish-due'
+    | '/api/public/hooks/sync-analytics'
     | '/api/public/oauth/$platform/callback'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +286,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicHooksPublishDueRoute: typeof ApiPublicHooksPublishDueRoute
+  ApiPublicHooksSyncAnalyticsRoute: typeof ApiPublicHooksSyncAnalyticsRoute
   ApiPublicOauthPlatformCallbackRoute: typeof ApiPublicOauthPlatformCallbackRoute
 }
 
@@ -411,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksPublishDueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-analytics': {
+      id: '/api/public/hooks/sync-analytics'
+      path: '/api/public/hooks/sync-analytics'
+      fullPath: '/api/public/hooks/sync-analytics'
+      preLoaderRoute: typeof ApiPublicHooksSyncAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/$platform/callback': {
       id: '/api/public/oauth/$platform/callback'
       path: '/api/public/oauth/$platform/callback'
@@ -465,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicHooksPublishDueRoute: ApiPublicHooksPublishDueRoute,
+  ApiPublicHooksSyncAnalyticsRoute: ApiPublicHooksSyncAnalyticsRoute,
   ApiPublicOauthPlatformCallbackRoute: ApiPublicOauthPlatformCallbackRoute,
 }
 export const routeTree = rootRouteImport

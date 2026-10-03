@@ -52,8 +52,7 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     const videos = published.map((p) => {
       const m = latest.get(p.id);
       const eng = m && m.views ? ((m.likes ?? 0) + (m.comments ?? 0) + (m.shares ?? 0)) / m.views : null;
-      const rev = (earnings ?? []).length ? null : null; // per-video revenue is not imported by any connected API yet
-      return { ...p, thumbnail: p.project_id ? thumbByProject.get(p.project_id) ?? null : null, metrics: m ?? null, engagement: eng, revenue: rev };
+      return { ...p, thumbnail: p.project_id ? thumbByProject.get(p.project_id) ?? null : null, metrics: m ?? null, engagement: eng, revenue: null as number | null };
     });
 
     const sum = (k: "views" | "likes" | "comments" | "shares" | "watch_time_minutes", list = videos) => {
