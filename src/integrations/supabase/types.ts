@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_settings: {
+        Row: {
+          account_ids: string[]
+          country: string
+          created_at: string
+          custom_slots: string[]
+          days_of_week: number[]
+          emergency_stop: boolean
+          emergency_stopped_at: string | null
+          frequency: string
+          platforms: string[]
+          publish_times: string[]
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_ids?: string[]
+          country?: string
+          created_at?: string
+          custom_slots?: string[]
+          days_of_week?: number[]
+          emergency_stop?: boolean
+          emergency_stopped_at?: string | null
+          frequency?: string
+          platforms?: string[]
+          publish_times?: string[]
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_ids?: string[]
+          country?: string
+          created_at?: string
+          custom_slots?: string[]
+          days_of_week?: number[]
+          emergency_stop?: boolean
+          emergency_stopped_at?: string | null
+          frequency?: string
+          platforms?: string[]
+          publish_times?: string[]
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       characters: {
         Row: {
           created_at: string
@@ -48,6 +96,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      internal_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      job_locks: {
+        Row: {
+          locked_until: string
+          name: string
+        }
+        Insert: {
+          locked_until: string
+          name: string
+        }
+        Update: {
+          locked_until?: string
+          name?: string
+        }
+        Relationships: []
       }
       oauth_states: {
         Row: {
@@ -338,53 +419,83 @@ export type Database = {
       }
       scheduled_posts: {
         Row: {
+          attempts: number
+          automated: boolean
           caption: string | null
           created_at: string
           external_post_id: string | null
           hashtags: string | null
           id: string
+          idempotency_key: string | null
           last_error: string | null
+          locked_until: string | null
+          max_attempts: number
+          next_attempt_at: string | null
           options: Json
           platform: string
           project_id: string | null
+          published_at: string | null
+          published_url: string | null
           scheduled_for: string | null
           social_account_id: string | null
           status: string
+          status_detail: string | null
           title: string | null
+          updated_at: string
           user_id: string
           video_id: string | null
         }
         Insert: {
+          attempts?: number
+          automated?: boolean
           caption?: string | null
           created_at?: string
           external_post_id?: string | null
           hashtags?: string | null
           id?: string
+          idempotency_key?: string | null
           last_error?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
           options?: Json
           platform: string
           project_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
           scheduled_for?: string | null
           social_account_id?: string | null
           status?: string
+          status_detail?: string | null
           title?: string | null
+          updated_at?: string
           user_id?: string
           video_id?: string | null
         }
         Update: {
+          attempts?: number
+          automated?: boolean
           caption?: string | null
           created_at?: string
           external_post_id?: string | null
           hashtags?: string | null
           id?: string
+          idempotency_key?: string | null
           last_error?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
           options?: Json
           platform?: string
           project_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
           scheduled_for?: string | null
           social_account_id?: string | null
           status?: string
+          status_detail?: string | null
           title?: string | null
+          updated_at?: string
           user_id?: string
           video_id?: string | null
         }
@@ -888,9 +999,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_job_lock: {
+        Args: { _name: string; _seconds: number }
+        Returns: boolean
+      }
       activate_skill_version: {
         Args: { _version_id: string }
         Returns: undefined
+      }
+      claim_scheduled_post: {
+        Args: { _id: string; _seconds: number }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -899,6 +1018,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_job_lock: { Args: { _name: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"

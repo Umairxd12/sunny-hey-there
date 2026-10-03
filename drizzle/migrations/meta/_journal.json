@@ -36,6 +36,13 @@
       "when": 1791035195961,
       "tag": "0004_social_account_management",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791035619999,
+      "tag": "0005_automation_scheduling",
+      "breakpoints": true
     }
   ]
 }
