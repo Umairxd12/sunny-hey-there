@@ -24,7 +24,12 @@ export interface PublishResult { externalPostId: string; status: PublishStatus; 
 export type PublishStatus = "processing" | "scheduled" | "published" | "failed";
 
 export interface AccountProfile { externalId: string; name: string; avatarUrl?: string | undefined }
-export interface PostAnalytics { views?: number; likes?: number; comments?: number; shares?: number }
+export interface PostAnalytics { views?: number; likes?: number; comments?: number; shares?: number; watchTimeMinutes?: number; avgViewSeconds?: number }
+export interface AccountMetrics { followers?: number | undefined; totalViews?: number | undefined; totalLikes?: number | undefined; videoCount?: number | undefined }
+export const REVENUE_UNAVAILABLE = "Revenue data unavailable through the connected API.";
+export type EarningsResult =
+  | { available: true; currency: string; days: { date: string; amount: number }[] }
+  | { available: false; reason: string };
 
 export interface AccountCredentials { accessToken: string; refreshToken?: string | null; externalId: string }
 
@@ -35,6 +40,9 @@ export interface SocialPublisher {
   getPublishStatus(cred: AccountCredentials, externalPostId: string): Promise<{ status: PublishStatus; detail?: string }>;
   getAccount(cred: AccountCredentials): Promise<AccountProfile>;
   getAnalytics(cred: AccountCredentials, externalPostId: string): Promise<PostAnalytics>;
+  getAccountMetrics(cred: AccountCredentials): Promise<AccountMetrics>;
+  /** Verified revenue only. Never estimated. */
+  getEarnings(cred: AccountCredentials, from: string, to: string): Promise<EarningsResult>;
 }
 
 export const PLATFORM_INFO: Record<SocialPlatform, { name: string; unit: string; secrets: [string, string]; capabilities: { label: string; available: boolean }[] }> = {

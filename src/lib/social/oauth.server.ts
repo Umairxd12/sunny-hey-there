@@ -3,9 +3,9 @@ import { PLATFORM_INFO } from "./types";
 
 // Minimum scopes needed for publishing + basic analytics.
 export const SCOPES: Record<SocialPlatform, string[]> = {
-  facebook: ["pages_show_list", "pages_read_engagement", "pages_manage_posts"],
-  youtube: ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/youtube.force-ssl"],
-  tiktok: ["user.info.basic", "video.publish", "video.list"],
+  facebook: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "read_insights"],
+  youtube: ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/youtube.force-ssl", "https://www.googleapis.com/auth/yt-analytics.readonly", "https://www.googleapis.com/auth/yt-analytics-monetary.readonly"],
+  tiktok: ["user.info.basic", "user.info.stats", "video.publish", "video.list"],
 };
 
 const FB = "https://graph.facebook.com/v21.0";

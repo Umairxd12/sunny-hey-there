@@ -1,8 +1,9 @@
-import { CapabilityNotAvailableError, type AccountCredentials, type PublishInput, type PublishResult, type SocialPlatform, type SocialPublisher } from "./types";
+import { CapabilityNotAvailableError, REVENUE_UNAVAILABLE, type AccountCredentials, type PostAnalytics, type PublishInput, type PublishResult, type SocialPlatform, type SocialPublisher } from "./types";
 
 const FB = "https://graph.facebook.com/v21.0";
 const YT = "https://www.googleapis.com/youtube/v3";
 const TT = "https://open.tiktokapis.com/v2";
+const YTA = "https://youtubeanalytics.googleapis.com/v2/reports";
 
 async function json(res: Response, what: string) {
   const body = await res.text();
@@ -39,7 +40,23 @@ export const FacebookPublisher: SocialPublisher = {
   },
   async getAnalytics(c, id) {
     const r = await json(await fetch(`${FB}/${id}?fields=views,likes.summary(true),comments.summary(true)&access_token=${encodeURIComponent(c.accessToken)}`), "Facebook analytics");
-    return { views: r.views, likes: r.likes?.summary?.total_count, comments: r.comments?.summary?.total_count };
+    const out: PostAnalytics = { views: r.views, likes: r.likes?.summary?.total_count, comments: r.comments?.summary?.total_count };
+    try { // needs read_insights; skipped quietly when not granted
+      const ins = await json(await fetch(`${FB}/${id}/video_insights?metric=total_video_view_total_time,total_video_avg_time_watched&access_token=${encodeURIComponent(c.accessToken)}`), "Facebook video insights");
+      for (const m of ins.data ?? []) {
+        const v = m.values?.[0]?.value;
+        if (m.name === "total_video_view_total_time" && typeof v === "number") out.watchTimeMinutes = v / 60000;
+        if (m.name === "total_video_avg_time_watched" && typeof v === "number") out.avgViewSeconds = v / 1000;
+      }
+    } catch { /* optional */ }
+    return out;
+  },
+  async getAccountMetrics(c) {
+    const r = await json(await fetch(`${FB}/${c.externalId}?fields=followers_count,fan_count&access_token=${encodeURIComponent(c.accessToken)}`), "Facebook Page stats");
+    return { followers: r.followers_count ?? r.fan_count };
+  },
+  async getEarnings() {
+    return { available: false, reason: `${REVENUE_UNAVAILABLE} Facebook does not expose Page monetization payouts to this app's permissions.` };
   },
 };
 
@@ -86,7 +103,28 @@ export const YouTubePublisher: SocialPublisher = {
   async getAnalytics(c, id) {
     const r = await json(await fetch(`${YT}/videos?part=statistics&id=${id}`, { headers: { Authorization: `Bearer ${c.accessToken}` } }), "YouTube analytics");
     const s = r.items?.[0]?.statistics ?? {};
-    return { views: Number(s.viewCount ?? 0), likes: Number(s.likeCount ?? 0), comments: Number(s.commentCount ?? 0) };
+    const out: PostAnalytics = { views: Number(s.viewCount ?? 0), likes: Number(s.likeCount ?? 0), comments: Number(s.commentCount ?? 0) };
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const rep = await json(await fetch(`${YTA}?ids=channel==MINE&startDate=2005-01-01&endDate=${today}&metrics=estimatedMinutesWatched,averageViewDuration,shares&filters=video==${id}`, { headers: { Authorization: `Bearer ${c.accessToken}` } }), "YouTube Analytics");
+      const row = rep.rows?.[0];
+      if (row) { out.watchTimeMinutes = Number(row[0]); out.avgViewSeconds = Number(row[1]); out.shares = Number(row[2]); }
+    } catch { /* yt-analytics scope not granted */ }
+    return out;
+  },
+  async getAccountMetrics(c) {
+    const r = await json(await fetch(`${YT}/channels?part=statistics&id=${c.externalId}`, { headers: { Authorization: `Bearer ${c.accessToken}` } }), "YouTube channel stats");
+    const st = r.items?.[0]?.statistics ?? {};
+    return { followers: st.hiddenSubscriberCount ? undefined : Number(st.subscriberCount ?? 0), totalViews: Number(st.viewCount ?? 0), videoCount: Number(st.videoCount ?? 0) };
+  },
+  async getEarnings(c, from, to) {
+    const res = await fetch(`${YTA}?ids=channel==MINE&startDate=${from}&endDate=${to}&metrics=estimatedRevenue&dimensions=day&currency=USD`, { headers: { Authorization: `Bearer ${c.accessToken}` } });
+    if (res.status === 401 || res.status === 403) {
+      const t = await res.text();
+      return { available: false, reason: `${REVENUE_UNAVAILABLE} ${/insufficient|scope/i.test(t) ? "Reconnect YouTube and allow revenue access." : "This channel is not in the YouTube Partner Program or revenue access was refused."}` };
+    }
+    const r = await json(res, "YouTube revenue");
+    return { available: true, currency: "USD", days: (r.rows ?? []).map((row: [string, number]) => ({ date: row[0], amount: Number(row[1]) })) };
   },
 };
 
@@ -120,6 +158,14 @@ export const TikTokPublisher: SocialPublisher = {
     const r = await json(await fetch(`${TT}/video/query/?fields=id,view_count,like_count,comment_count,share_count`, { method: "POST", headers: { Authorization: `Bearer ${c.accessToken}`, "content-type": "application/json" }, body: JSON.stringify({ filters: { video_ids: [id] } }) }), "TikTok analytics");
     const v = r.data?.videos?.[0] ?? {};
     return { views: v.view_count, likes: v.like_count, comments: v.comment_count, shares: v.share_count };
+  },
+  async getAccountMetrics(c) {
+    const r = await json(await fetch(`${TT}/user/info/?fields=follower_count,likes_count,video_count`, { headers: { Authorization: `Bearer ${c.accessToken}` } }), "TikTok user stats");
+    const u = r.data?.user ?? {};
+    return { followers: u.follower_count, totalLikes: u.likes_count, videoCount: u.video_count };
+  },
+  async getEarnings() {
+    return { available: false, reason: `${REVENUE_UNAVAILABLE} TikTok's official API does not provide creator earnings.` };
   },
 };
 
