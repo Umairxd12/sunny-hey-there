@@ -14,9 +14,9 @@ export interface ScheduleRule {
 
 function partsIn(date: Date, tz: string) {
   const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "short" });
-  const p = Object.fromEntries(f.formatToParts(date).map((x) => [x.type, x.value]));
-  const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday!);
-  return { y: +p.year!, m: +p.month!, d: +p.day!, h: +p.hour!, mi: +p.minute!, s: +p.second!, wd };
+  const p = Object.fromEntries(f.formatToParts(date).map((x) => [x.type, x.value])) as { year: string; month: string; day: string; hour: string; minute: string; second: string; weekday: string };
+  const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday);
+  return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour, mi: +p.minute, s: +p.second, wd };
 }
 
 /** Converts a wall-clock time in `tz` to a real instant. */

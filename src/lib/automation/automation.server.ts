@@ -42,7 +42,7 @@ export async function queueCompletedProject(db: Db, userId: string, projectId: s
   const slot = automatic ? nextSlot(rule(settings), new Date(), taken) : null;
 
   const base = { user_id: userId, project_id: projectId, video_id: video?.id ?? null, title: project.title, automated: automatic };
-  const rows = targets.length
+  const rows: Database["public"]["Tables"]["scheduled_posts"]["Insert"][] = targets.length
     ? targets.map((a) => ({ ...base, platform: a.platform, social_account_id: a.id, idempotency_key: `${projectId}:${video?.id ?? "novideo"}:${a.id}`,
         status: slot ? "SCHEDULED" : "READY", scheduled_for: slot?.toISOString() ?? null, next_attempt_at: slot?.toISOString() ?? null,
         status_detail: automatic && !slot ? "No upcoming publishing time in your automation settings." : null }))
