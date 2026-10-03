@@ -7,6 +7,7 @@ import { Check, X } from "lucide-react";
 import { PageHeader } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { pageHead } from "@/lib/seo";
 import { CONNECT_TO_ENABLE, NOT_AVAILABLE, PLATFORMS, PLATFORM_INFO, type SocialPlatform } from "@/lib/social/types";
 import { disconnectSocialAccount, getSocialSetup, listSocialAccounts, setProjectAccounts, startSocialConnect, syncSocialAccount } from "@/lib/social.functions";
@@ -73,10 +74,13 @@ function SocialPage() {
                   </li>
                 ))}
               </ul>
+              {setup.isError && <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">Couldn't check setup: {(setup.error as Error).message}</p>}
               {s && !s.configured && (
-                <p className="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                  Needs your {info.name} developer app keys ({s.secrets.join(", ")}). Callback address: <span className="break-all font-mono">{s.callbackUrl}</span>
-                </p>
+                <div className="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">{CONNECT_TO_ENABLE}</p>
+                  <p className="mt-1">Needs your {info.name} developer app keys ({s.secrets.join(", ")}).</p>
+                  <p className="mt-1">Return address to paste into the {info.name} developer app: <span className="break-all font-mono">{s.callbackUrl}</span></p>
+                </div>
               )}
               <Button className="mt-4" disabled={!s?.configured || busy === p} onClick={() => connect(p)}>
                 {busy === p ? "Opening…" : `Connect ${info.name}`}
@@ -121,7 +125,21 @@ function SocialPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {a.status === "connected" && <Button size="sm" variant="outline" onClick={async () => { const r = await syncFn({ data: { accountId: a.id } }); r.ok ? toast.success("Synced") : toast.error(r.error); refresh(); }}>Sync</Button>}
                       <Button size="sm" variant="outline" disabled={!s?.configured} onClick={() => connect(p, a.id)}>Reconnect</Button>
-                      {a.status === "connected" && <Button size="sm" variant="ghost" onClick={async () => { await disconnectFn({ data: { accountId: a.id } }); toast.success("Disconnected"); refresh(); }}>Disconnect</Button>}
+                      {a.status === "connected" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button size="sm" variant="ghost">Disconnect</Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Disconnect {a.account_name}?</AlertDialogTitle>
+                              <AlertDialogDescription>We'll revoke access at {info.name} where it allows it and delete the stored keys. Posts waiting for this account go back to Ready. Published videos are not affected.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={async () => { const r = await disconnectFn({ data: { accountId: a.id } }); r.ok ? toast.success("Disconnected", { description: r.note }) : toast.error(r.error); refresh(); }}>Disconnect</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                 ))}
