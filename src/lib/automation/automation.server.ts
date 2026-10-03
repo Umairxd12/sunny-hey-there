@@ -155,5 +155,6 @@ export async function processDuePosts(batch = 5) {
     return report;
   } finally {
     await db.rpc("release_job_lock", { _name: "publish-due" });
+    await db.rpc("stop_publish_cron_if_idle"); // removes the timer once nothing is waiting
   }
 }
