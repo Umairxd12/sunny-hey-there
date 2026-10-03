@@ -77,17 +77,48 @@ function CreateVideo() {
     e.preventDefault();
     if (!idea.trim()) { toast.error("Write an idea or pick a suggested one."); return; }
     setBusy(true);
+    try {
+      const id = await createProject({ title, topic, idea });
+      navigate({ to: "/projects/$projectId", params: { projectId: id }, search: { ...(autostart ? { autostart: "1" as const } : {}) } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create project");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createProject(p: { title: string; topic: string; idea: string }) {
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase.from("projects")
       .insert({
-        title, idea, topic: topic || null, target_duration_seconds: Number(duration), aspect_ratio: ratio,
+        title: p.title, idea: p.idea, topic: p.topic || null, target_duration_seconds: Number(duration), aspect_ratio: ratio,
         target_platform: PLATFORM_LABEL[platform] ?? platform, target_audience: audience || null, reference_notes: refs || null,
         language, visual_style: style || null, video_requirements: reqs || null, user_id: u.user!.id,
       })
       .select("id").single();
-    setBusy(false);
-    if (error || !data) { toast.error(error?.message ?? "Could not create project"); return; }
-    navigate({ to: "/projects/$projectId", params: { projectId: data.id }, search: { ...(autostart ? { autostart: "1" as const } : {}) } });
+    if (error || !data) throw new Error(error?.message ?? "Could not create project");
+    return data.id as string;
+  }
+
+  /** TRUE ONE CLICK: AI invents topic + title + idea, creates the project from it,
+   *  and the project page autostarts the full pipeline (script → storyboard → video). */
+  async function aiFullAuto() {
+    setBusy(true);
+    try {
+      const res = await genBrief({ data: { duration: Number(duration), language } });
+      if (!res.ok) { toast.error(res.error); return; }
+      const brief = res.brief;
+      setTitle(brief.title);
+      setTopic(brief.topic);
+      setIdea(brief.description);
+      const id = await createProject({ title: brief.title, topic: brief.topic, idea: brief.description });
+      toast.success("AI ne idea banaya — ab TechGenie poora video bana raha hai: script, storyboard, characters, video.");
+      navigate({ to: "/projects/$projectId", params: { projectId: id }, search: { autostart: "1" as const } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI video start nahi ho saka. Dobara try karein.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -101,9 +132,14 @@ function CreateVideo() {
         </div>
       </div>
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+        <Button type="button" className="w-full" onClick={aiFullAuto} disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          {busy ? "AI idea bana raha hai…" : "AI idea banao aur poora video start karo — 1 click"}
+        </Button>
+        <p className="-mt-3 text-xs text-muted-foreground">Ek click: AI topic + title + video idea banata hai, project create hota hai, aur TechGenie poora flow chalata hai — script, storyboard, locked characters, video — phir finished video approve/reject ke liye.</p>
         <Button type="button" variant="secondary" className="w-full" onClick={aiBrief} disabled={briefBusy}>
           {briefBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-          {briefBusy ? "AI soch raha hai…" : "AI se topic, title aur description banwao"}
+          {briefBusy ? "AI soch raha hai…" : "Sirf AI se topic, title aur description banwao"}
         </Button>
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
         <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
