@@ -198,6 +198,11 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
     if (stageKey === "characters") await db.from("characters").insert({ project_id: projectId, user_id: userId, name: `${project.title} cast`, description: output });
     const isLast = idx === STAGES.length - 1;
     await db.from("projects").update({ status: isLast ? "COMPLETED" : runningStatus }).eq("id", projectId);
+    if (isLast) {
+      // Completed videos become READY posts (or SCHEDULED when auto-publish is on).
+      const { queueCompletedProject } = await import("../automation/automation.server");
+      await queueCompletedProject(db, userId, projectId).catch((e) => console.error("queueCompletedProject failed", e));
+    }
     return { ok: true };
   } catch (e) {
     console.error("stage failed", stageKey, e);
