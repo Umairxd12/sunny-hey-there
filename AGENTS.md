@@ -29,3 +29,5 @@
 - The `publish-due-posts` pg_cron job is created by a trigger when posts are queued and removed by `stop_publish_cron_if_idle` once the queue drains — no permanent polling.
 - Emergency stop (`automation_settings.emergency_stop`) is checked per post right before publishing; it never touches already-published posts.
 - Completed projects queue posts via `queueCompletedProject`: READY when auto-publish is off (or emergency stop is on), SCHEDULED at the next slot from `nextSlot` (`src/lib/automation/schedule.ts`) otherwise.
+- Analytics sync runs only via `syncUserAnalytics` (`src/lib/analytics/analytics.server.ts`) — manual "Sync now" or the hourly `/api/public/hooks/sync-analytics` cron (same cron secret, single-flight lock, bounded users/posts); every run appends snapshots (`account_metrics`, `video_metrics`, `analytics_snapshots`) so history is never overwritten, and writes one `sync_logs` row per account.
+- Earnings come only from `SocialPublisher.getEarnings`, which returns platform-reported amounts or `{available:false}` — never estimates; totals sum only verified rows in USD, other currencies are listed separately until an exchange-rate provider exists.
