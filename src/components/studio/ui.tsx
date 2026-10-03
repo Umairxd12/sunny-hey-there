@@ -56,7 +56,7 @@ export function StatusBadge({ status }: { status: string }) {
   return <Badge variant="secondary" className={cn("border-0 font-medium", s.cls)}>{s.label}</Badge>;
 }
 
-export function StatCard({ label, value, hint, icon: Icon }: { label: string; value: ReactNode; hint?: string; icon: LucideIcon }) {
+export function StatCard({ label, value, hint, icon: Icon }: { label: string; value: ReactNode; hint?: string | undefined; icon: LucideIcon }) {
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center justify-between text-sm text-muted-foreground">{label}<Icon className="size-4" /></div>
