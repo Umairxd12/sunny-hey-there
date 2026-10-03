@@ -38,7 +38,7 @@ function Tip({ text }: { text: string }) {
   );
 }
 
-function Card({ label, value, tip, icon: Icon, to, tone }: { label: string; value: ReactNode; tip: string; icon: typeof Film; to?: string; tone?: "primary" | "success" }) {
+function Card({ label, value, tip, icon: Icon, to, tone, wide }: { label: string; value: ReactNode; tip: string; icon: typeof Film; to?: string; tone?: "primary" | "success"; wide?: boolean }) {
   const body = (
     <div className={cn("group h-full rounded-2xl border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-md", tone === "primary" && "border-primary/30 bg-primary/5")}>
       <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
@@ -48,7 +48,8 @@ function Card({ label, value, tip, icon: Icon, to, tone }: { label: string; valu
       <div className="mt-2 font-display text-3xl font-semibold">{value}</div>
     </div>
   );
-  return to ? <Link to={to} className="block">{body}</Link> : body;
+  const span = wide ? "lg:col-span-4" : "lg:col-span-3";
+  return to ? <Link to={to} className={cn("block", span)}>{body}</Link> : <div className={span}>{body}</div>;
 }
 
 function Panel({ title, icon: Icon, action, children, className }: { title: string; icon: typeof Film; action?: ReactNode; children: ReactNode; className?: string }) {
@@ -105,18 +106,18 @@ function Dashboard() {
       ) : <Skeleton className="mb-6 h-8 w-2/3" />}
 
       {/* Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
         {d ? (<>
           <Card label="In production" value={d.cards.inProduction} icon={Clapperboard} to="/projects" tone="primary" tip="Projects currently moving through the production steps." />
           <Card label="Ready" value={d.cards.ready} icon={PackageCheck} to="/calendar" tip="Finished videos waiting for you to publish or schedule them." />
           <Card label="Scheduled" value={d.cards.scheduled} icon={CalendarClock} to="/calendar" tip="Posts waiting for their publishing time, including retries." />
           <Card label="Published today" value={d.cards.publishedToday} icon={Send} tone="success" to="/calendar" tip="Posts confirmed live by the platform today." />
-        </>) : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+        </>) : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl lg:col-span-3" />)}
         {an ? (<>
-          <Card label="Total views" value={fmtNum(an.totals.views)} icon={Eye} to="/analytics" tip="Views reported by the platforms for videos published in the last 30 days." />
-          <Card label="Followers" value={fmtNum(an.totals.followers)} icon={Users} to="/analytics" tip="Latest follower / subscriber counts reported by your connected accounts." />
-          <Card label="Available earnings" value={fmtMoney(an.earnings.totalUsd)} icon={DollarSign} to="/analytics" tip="Only amounts the platforms report through their official APIs. Never estimated." />
-        </>) : Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+          <Card label="Total views" wide value={fmtNum(an.totals.views)} icon={Eye} to="/analytics" tip="Views reported by the platforms for videos published in the last 30 days." />
+          <Card label="Followers" wide value={fmtNum(an.totals.followers)} icon={Users} to="/analytics" tip="Latest follower / subscriber counts reported by your connected accounts." />
+          <Card label="Available earnings" wide value={fmtMoney(an.earnings.totalUsd)} icon={DollarSign} to="/analytics" tip="Only amounts the platforms report through their official APIs. Never estimated." />
+        </>) : Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl lg:col-span-4" />)}
       </div>
 
       {/* Production pipeline */}
@@ -216,8 +217,8 @@ function Dashboard() {
           {!d ? <Skeleton className="h-40" /> : d.accounts.length === 0 ? (
             <div className="space-y-2">
               {(["facebook", "youtube", "tiktok"] as const).map((p) => (
-                <div key={p} className="flex items-center justify-between rounded-xl border p-3 text-sm">
-                  <span className="font-medium">{PLATFORM_INFO[p].name}</span>
+                <div key={p} className="rounded-xl border p-3 text-sm">
+                  <p className="font-medium">{PLATFORM_INFO[p].name}</p>
                   <span className="text-xs text-muted-foreground">{d.status.platformsReady.includes(p) ? "Ready to connect" : CONNECT_TO_ENABLE}</span>
                 </div>
               ))}
@@ -230,7 +231,7 @@ function Dashboard() {
         </Panel>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
         {/* Analytics */}
         <Panel title="Performance (30 days)" icon={Eye} className="lg:col-span-2" action={<span className="text-xs text-muted-foreground">{an?.lastSync ? `Synced ${timeAgo(an.lastSync)}` : "Not synced yet"}</span>}>
           {!an ? <Skeleton className="h-56" /> : an.timeline.length < 2 ? (
@@ -256,10 +257,10 @@ function Dashboard() {
           {!an ? <Skeleton className="h-40" /> : (
             <ul className="space-y-2 text-sm">
               {an.platforms.map((p) => (
-                <li key={p.platform} className="flex items-center justify-between gap-2 rounded-xl border p-3">
+                <li key={p.platform} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border p-3">
                   <span className="font-medium">{PLATFORM_INFO[p.platform].name}</span>
                   {p.earnings != null ? <span className="font-semibold">{fmtMoney(p.earnings)}</span>
-                    : <span className="text-right text-xs text-muted-foreground">{p.accounts ? REVENUE_UNAVAILABLE : CONNECT_TO_ENABLE}</span>}
+                    : <span className="text-xs text-muted-foreground">{p.accounts ? REVENUE_UNAVAILABLE : CONNECT_TO_ENABLE}</span>}
                 </li>
               ))}
               <li className="flex items-center justify-between px-1 pt-1 font-semibold"><span>Total (USD)</span><span>{fmtMoney(an.earnings.totalUsd)}</span></li>
