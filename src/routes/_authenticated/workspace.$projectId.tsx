@@ -127,7 +127,7 @@ function Workspace() {
 
   async function createPost(schedule: boolean) {
     await act("post", async () => {
-      const { error } = await supabase.from("scheduled_posts").insert({ project_id: projectId, platform: project.target_platform ?? "youtube", title: project.title, caption, hashtags, status: "draft" });
+      const { error } = await supabase.from("scheduled_posts").insert({ project_id: projectId, platform: project.target_platform ?? "youtube", title: project.title, caption, hashtags, status: "DRAFT" });
       if (error) throw error;
       await log(schedule ? "Created post to schedule" : "Created post to publish");
     }, schedule ? "Post saved — set the time in Scheduler" : "Post saved — publish it from Scheduler once an account is connected");
