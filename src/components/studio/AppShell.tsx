@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { BarChart3, BookOpenText, CalendarDays, Clapperboard, Cpu, FolderKanban, Film, LayoutDashboard, LogOut, Menu, Settings, Share2, Sparkles, Timer, Users, PanelsTopLeft } from "lucide-react";
+import { BarChart3, BookOpenText, CalendarDays, Clapperboard, Cpu, FolderKanban, Film, LayoutDashboard, LogOut, Menu, Settings, Share2, Sparkles, Timer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,6 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/create", label: "Create Video", icon: Sparkles },
   { to: "/projects", label: "Projects", icon: FolderKanban },
-  { to: "/characters", label: "Characters", icon: Users },
-  { to: "/storyboards", label: "Storyboards", icon: PanelsTopLeft },
   { to: "/videos", label: "Videos", icon: Film },
   { to: "/social", label: "Social Accounts", icon: Share2 },
   { to: "/scheduler", label: "Scheduler", icon: Timer },

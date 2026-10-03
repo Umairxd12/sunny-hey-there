@@ -28,6 +28,21 @@ export const suggestVideoIdeas = createServerFn({ method: "POST" })
     }
   });
 
+export const generateVideoBrief = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    duration: z.number().int().min(3).max(180),
+    language: z.string().max(40),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { generateBrief } = await import("./ai/orchestrator.server");
+    try {
+      return { ok: true as const, brief: await generateBrief(data) };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Could not generate a brief." };
+    }
+  });
+
 export const getEngineStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {

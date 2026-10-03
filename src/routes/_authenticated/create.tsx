@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { suggestVideoIdeas } from "@/lib/pipeline.functions";
+import { suggestVideoIdeas, generateVideoBrief } from "@/lib/pipeline.functions";
 import { LOCKED_CHARACTERS } from "@/lib/character-lock";
 import { pageHead } from "@/lib/seo";
 
@@ -25,6 +25,7 @@ const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", youtube_short
 function CreateVideo() {
   const navigate = useNavigate();
   const suggest = useServerFn(suggestVideoIdeas);
+  const genBrief = useServerFn(generateVideoBrief);
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
   const [idea, setIdea] = useState("");
@@ -38,7 +39,25 @@ function CreateVideo() {
   const [reqs, setReqs] = useState("");
   const [busy, setBusy] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
+  const [briefBusy, setBriefBusy] = useState(false);
   const [ideas, setIdeas] = useState<{ title: string; idea: string }[]>([]);
+
+  /** One click: AI invents a topic + title and writes the description for it. */
+  async function aiBrief() {
+    setBriefBusy(true);
+    try {
+      const res = await genBrief({ data: { duration: Number(duration), language } });
+      if (!res.ok) { toast.error(res.error); return; }
+      setTitle(res.brief.title);
+      setTopic(res.brief.topic);
+      setIdea(res.brief.description);
+      toast.success("AI ne topic, title aur description bana diya — dekho aur 1 click me video banao.");
+    } catch {
+      toast.error("AI brief nahi ban saka. Dobara try karein.");
+    } finally {
+      setBriefBusy(false);
+    }
+  }
 
   async function getIdeas() {
     setIdeasBusy(true);
@@ -82,6 +101,10 @@ function CreateVideo() {
         </div>
       </div>
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+        <Button type="button" variant="secondary" className="w-full" onClick={aiBrief} disabled={briefBusy}>
+          {briefBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          {briefBusy ? "AI soch raha hai…" : "AI se topic, title aur description banwao"}
+        </Button>
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
         <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
         <div className="grid gap-4 sm:grid-cols-3">

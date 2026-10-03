@@ -168,13 +168,13 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
           const { data: existing } = await db.from("pipeline_steps").select("status").eq("project_id", b.projectId).eq("step_key", "generate_video").maybeSingle();
           if (existing?.status === "done") return Response.json({ ok: false, error: "Video stage already done." }, { status: 409 });
           const clipRows = b.clips.map((c, i) => ({
-            project_id: b.projectId, position: i, from_s: c.from_s, to_s: c.to_s,
+            project_id: b.projectId, user_id: project.user_id, position: i, from_s: c.from_s, to_s: c.to_s,
             prompt: c.prompt, video_url: c.video_url, source: "worker", status: "ready",
           }));
           const { error: clipErr } = await db.from("video_clips").insert(clipRows);
           if (clipErr) return Response.json({ ok: false, error: `Could not save clips: ${clipErr.message}` }, { status: 500 });
-          await db.from("video_assets").insert({ project_id: b.projectId, kind: "final", url: b.finalVideoUrl, metadata: { source: "worker" } });
-          if (b.thumbnailUrl) await db.from("video_assets").insert({ project_id: b.projectId, kind: "thumbnail", url: b.thumbnailUrl, metadata: { source: "worker" } });
+          await db.from("video_assets").insert({ project_id: b.projectId, user_id: project.user_id, kind: "final", url: b.finalVideoUrl, metadata: { source: "worker" } });
+          if (b.thumbnailUrl) await db.from("video_assets").insert({ project_id: b.projectId, user_id: project.user_id, kind: "thumbnail", url: b.thumbnailUrl, metadata: { source: "worker" } });
           const { data: videoRow } = await db.from("videos").insert({
             project_id: b.projectId, user_id: project.user_id, provider: "studio-worker", status: "done", video_url: b.finalVideoUrl,
           }).select("id").single();

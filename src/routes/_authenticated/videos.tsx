@@ -11,26 +11,27 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: Page,
 });
 
-type Row = { projectId: string; title: string; url: string | null; status: string; createdAt: string };
+type Row = { projectId: string; title: string; url: string | null; status: string; createdAt: string; source: "studio" | "chat" };
 
 function Page() {
   const { data, isLoading } = useQuery({
     queryKey: ["videos"],
     queryFn: async () => {
       const [vids, assets, projects] = await Promise.all([
-        supabase.from("videos").select("project_id, status, video_url, created_at").order("created_at", { ascending: false }).limit(100),
-        supabase.from("video_assets").select("project_id, url, created_at").eq("kind", "final").order("created_at", { ascending: false }).limit(100),
+        supabase.from("videos").select("project_id, status, video_url, provider, created_at").order("created_at", { ascending: false }).limit(100),
+        supabase.from("video_assets").select("project_id, url, metadata, created_at").eq("kind", "final").order("created_at", { ascending: false }).limit(100),
         supabase.from("projects").select("id, title"),
       ]);
       const titles = new Map((projects.data ?? []).map((p) => [p.id, p.title]));
       const rows = new Map<string, Row>();
       for (const v of vids.data ?? []) {
         if (!v.project_id || rows.has(v.project_id)) continue;
-        rows.set(v.project_id, { projectId: v.project_id, title: titles.get(v.project_id) ?? "Untitled", url: v.video_url, status: v.status ?? "unknown", createdAt: v.created_at });
+        rows.set(v.project_id, { projectId: v.project_id, title: titles.get(v.project_id) ?? "Untitled", url: v.video_url, status: v.status ?? "unknown", createdAt: v.created_at, source: v.provider === "chat-assistant" ? "chat" : "studio" });
       }
       for (const a of assets.data ?? []) {
         if (!a.project_id || rows.has(a.project_id)) continue;
-        rows.set(a.project_id, { projectId: a.project_id, title: titles.get(a.project_id) ?? "Untitled", url: a.url, status: "done", createdAt: a.created_at });
+        const meta = (a as any).metadata as { source?: string } | null;
+        rows.set(a.project_id, { projectId: a.project_id, title: titles.get(a.project_id) ?? "Untitled", url: a.url, status: "done", createdAt: a.created_at, source: meta?.source === "chat" ? "chat" : "studio" });
       }
       return [...rows.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
     },
@@ -59,8 +60,10 @@ function Page() {
             <div className="flex items-center justify-between gap-2 p-4">
               <div className="min-w-0">
                 <h3 className="truncate font-semibold">{r.title}</h3>
-                <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                  <StatusBadge status={r.status} />{new Date(r.createdAt).toLocaleString()}
+                <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <StatusBadge status={r.status} />
+                  <span className="rounded-full bg-secondary px-2 py-0.5">{r.source === "chat" ? "Made in chat" : "Studio"}</span>
+                  {new Date(r.createdAt).toLocaleString()}
                 </p>
               </div>
               <Button size="sm" asChild><Link to="/workspace/$projectId" params={{ projectId: r.projectId }}>Review</Link></Button>

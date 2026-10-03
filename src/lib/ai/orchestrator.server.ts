@@ -239,3 +239,32 @@ Output exactly 5 lines, no numbering, no extra text, each formatted as: Title ::
   return text.split("\n").map((l) => l.replace(/^[\s\-*\d.)]+/, "").trim()).filter((l) => l.includes("::")).slice(0, 5)
     .map((l) => { const [title, ...rest] = l.split("::"); return { title: title!.trim().replace(/\*+/g, ""), idea: rest.join("::").trim() }; });
 }
+
+/**
+ * One-click brief: invents a fresh topic, a catchy title and a full video
+ * description from the active skill — used by the "AI se likhwao" button on
+ * the Create page to fill the Title, Topic and Video idea fields at once.
+ */
+export async function generateBrief(input: { duration: number; language: string }) {
+  const skill = await loadActiveSkill();
+  if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
+  const provider = getTextProvider();
+  if (!provider) throw new ProviderNotConfiguredError("text");
+  const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
+  const prompt = `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
+Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
+{"topic": "2-4 word theme, e.g. Coconut Chaos", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the setup, the complication and the deadpan payoff. Write it as the video idea the studio will produce."}`;
+  const { text } = await provider.generate({ system, prompt });
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error("The AI reply was not valid JSON. Please try again.");
+  }
+  const topic = String(parsed?.topic ?? "").trim().slice(0, 200);
+  const title = String(parsed?.title ?? "").trim().slice(0, 200);
+  const description = String(parsed?.description ?? "").trim().slice(0, 4000);
+  if (!title || !description) throw new Error("The AI reply was incomplete. Please try again.");
+  return { topic, title, description };
+}

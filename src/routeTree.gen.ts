@@ -15,7 +15,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
-import { Route as AuthenticatedCharactersRouteImport } from './routes/_authenticated/characters'
 import { Route as AuthenticatedCreateRouteImport } from './routes/_authenticated/create'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProvidersRouteImport } from './routes/_authenticated/providers'
@@ -23,7 +22,6 @@ import { Route as AuthenticatedSchedulerRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated/skills'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
-import { Route as AuthenticatedStoryboardsRouteImport } from './routes/_authenticated/storyboards'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
 import { Route as AuthenticatedAnalyticsPostIdRouteImport } from './routes/_authenticated/analytics.$postId'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
@@ -31,6 +29,7 @@ import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_au
 import { Route as AuthenticatedWorkspaceProjectIdRouteImport } from './routes/_authenticated/workspace.$projectId'
 import { Route as ApiPublicHooksPublishDueRouteImport } from './routes/api/public/hooks/publish-due'
 import { Route as ApiPublicHooksSyncAnalyticsRouteImport } from './routes/api/public/hooks/sync-analytics'
+import { Route as ApiPublicHooksVideoChatDeliveryRouteImport } from './routes/api/public/hooks/video-chat-delivery'
 import { Route as ApiPublicHooksVideoJobUploadRouteImport } from './routes/api/public/hooks/video-job-upload'
 import { Route as ApiPublicHooksVideoJobsRouteImport } from './routes/api/public/hooks/video-jobs'
 import { Route as ApiPublicOauthPlatformCallbackRouteImport } from './routes/api/public/oauth.$platform.callback'
@@ -62,11 +61,6 @@ const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedCharactersRoute = AuthenticatedCharactersRouteImport.update({
-  id: '/characters',
-  path: '/characters',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCreateRoute = AuthenticatedCreateRouteImport.update({
@@ -104,12 +98,6 @@ const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
   path: '/social',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedStoryboardsRoute =
-  AuthenticatedStoryboardsRouteImport.update({
-    id: '/storyboards',
-    path: '/storyboards',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
   id: '/videos',
   path: '/videos',
@@ -151,6 +139,12 @@ const ApiPublicHooksSyncAnalyticsRoute =
     path: '/api/public/hooks/sync-analytics',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVideoChatDeliveryRoute =
+  ApiPublicHooksVideoChatDeliveryRouteImport.update({
+    id: '/api/public/hooks/video-chat-delivery',
+    path: '/api/public/hooks/video-chat-delivery',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksVideoJobUploadRoute =
   ApiPublicHooksVideoJobUploadRouteImport.update({
     id: '/api/public/hooks/video-job-upload',
@@ -175,7 +169,6 @@ export interface FileRoutesByFullPath {
   '/activity': typeof AuthenticatedActivityRoute
   '/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
-  '/characters': typeof AuthenticatedCharactersRoute
   '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/providers': typeof AuthenticatedProvidersRoute
@@ -183,7 +176,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/storyboards': typeof AuthenticatedStoryboardsRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -191,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
@@ -201,7 +194,6 @@ export interface FileRoutesByTo {
   '/activity': typeof AuthenticatedActivityRoute
   '/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
-  '/characters': typeof AuthenticatedCharactersRoute
   '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/providers': typeof AuthenticatedProvidersRoute
@@ -209,7 +201,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/storyboards': typeof AuthenticatedStoryboardsRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -217,6 +208,7 @@ export interface FileRoutesByTo {
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
@@ -229,7 +221,6 @@ export interface FileRoutesById {
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
-  '/_authenticated/characters': typeof AuthenticatedCharactersRoute
   '/_authenticated/create': typeof AuthenticatedCreateRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/providers': typeof AuthenticatedProvidersRoute
@@ -237,7 +228,6 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/skills': typeof AuthenticatedSkillsRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
-  '/_authenticated/storyboards': typeof AuthenticatedStoryboardsRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -245,6 +235,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
@@ -257,7 +248,6 @@ export interface FileRouteTypes {
     | '/activity'
     | '/analytics'
     | '/calendar'
-    | '/characters'
     | '/create'
     | '/dashboard'
     | '/providers'
@@ -265,7 +255,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/social'
-    | '/storyboards'
     | '/videos'
     | '/analytics/$postId'
     | '/projects/$projectId'
@@ -273,6 +262,7 @@ export interface FileRouteTypes {
     | '/projects/'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
@@ -283,7 +273,6 @@ export interface FileRouteTypes {
     | '/activity'
     | '/analytics'
     | '/calendar'
-    | '/characters'
     | '/create'
     | '/dashboard'
     | '/providers'
@@ -291,7 +280,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/social'
-    | '/storyboards'
     | '/videos'
     | '/analytics/$postId'
     | '/projects/$projectId'
@@ -299,6 +287,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
@@ -310,7 +299,6 @@ export interface FileRouteTypes {
     | '/_authenticated/activity'
     | '/_authenticated/analytics'
     | '/_authenticated/calendar'
-    | '/_authenticated/characters'
     | '/_authenticated/create'
     | '/_authenticated/dashboard'
     | '/_authenticated/providers'
@@ -318,7 +306,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/skills'
     | '/_authenticated/social'
-    | '/_authenticated/storyboards'
     | '/_authenticated/videos'
     | '/_authenticated/analytics/$postId'
     | '/_authenticated/projects/$projectId'
@@ -326,6 +313,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
@@ -337,6 +325,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiPublicHooksPublishDueRoute: typeof ApiPublicHooksPublishDueRoute
   ApiPublicHooksSyncAnalyticsRoute: typeof ApiPublicHooksSyncAnalyticsRoute
+  ApiPublicHooksVideoChatDeliveryRoute: typeof ApiPublicHooksVideoChatDeliveryRoute
   ApiPublicHooksVideoJobUploadRoute: typeof ApiPublicHooksVideoJobUploadRoute
   ApiPublicHooksVideoJobsRoute: typeof ApiPublicHooksVideoJobsRoute
   ApiPublicOauthPlatformCallbackRoute: typeof ApiPublicOauthPlatformCallbackRoute
@@ -384,13 +373,6 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/characters': {
-      id: '/_authenticated/characters'
-      path: '/characters'
-      fullPath: '/characters'
-      preLoaderRoute: typeof AuthenticatedCharactersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/create': {
@@ -442,13 +424,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSocialRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/storyboards': {
-      id: '/_authenticated/storyboards'
-      path: '/storyboards'
-      fullPath: '/storyboards'
-      preLoaderRoute: typeof AuthenticatedStoryboardsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/videos': {
       id: '/_authenticated/videos'
       path: '/videos'
@@ -498,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/video-chat-delivery': {
+      id: '/api/public/hooks/video-chat-delivery'
+      path: '/api/public/hooks/video-chat-delivery'
+      fullPath: '/api/public/hooks/video-chat-delivery'
+      preLoaderRoute: typeof ApiPublicHooksVideoChatDeliveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/video-job-upload': {
       id: '/api/public/hooks/video-job-upload'
       path: '/api/public/hooks/video-job-upload'
@@ -540,7 +522,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
-  AuthenticatedCharactersRoute: typeof AuthenticatedCharactersRoute
   AuthenticatedCreateRoute: typeof AuthenticatedCreateRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProvidersRoute: typeof AuthenticatedProvidersRoute
@@ -548,7 +529,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
-  AuthenticatedStoryboardsRoute: typeof AuthenticatedStoryboardsRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRoute
   AuthenticatedWorkspaceProjectIdRoute: typeof AuthenticatedWorkspaceProjectIdRoute
@@ -559,7 +539,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRouteWithChildren,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
-  AuthenticatedCharactersRoute: AuthenticatedCharactersRoute,
   AuthenticatedCreateRoute: AuthenticatedCreateRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProvidersRoute: AuthenticatedProvidersRoute,
@@ -567,7 +546,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSkillsRoute: AuthenticatedSkillsRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
-  AuthenticatedStoryboardsRoute: AuthenticatedStoryboardsRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedProjectsProjectIdRoute: AuthenticatedProjectsProjectIdRoute,
   AuthenticatedWorkspaceProjectIdRoute: AuthenticatedWorkspaceProjectIdRoute,
@@ -583,6 +561,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiPublicHooksPublishDueRoute: ApiPublicHooksPublishDueRoute,
   ApiPublicHooksSyncAnalyticsRoute: ApiPublicHooksSyncAnalyticsRoute,
+  ApiPublicHooksVideoChatDeliveryRoute: ApiPublicHooksVideoChatDeliveryRoute,
   ApiPublicHooksVideoJobUploadRoute: ApiPublicHooksVideoJobUploadRoute,
   ApiPublicHooksVideoJobsRoute: ApiPublicHooksVideoJobsRoute,
   ApiPublicOauthPlatformCallbackRoute: ApiPublicOauthPlatformCallbackRoute,
