@@ -25,7 +25,7 @@ export type PublishStatus = "processing" | "scheduled" | "published" | "failed";
 
 export interface AccountProfile { externalId: string; name: string; avatarUrl?: string | undefined }
 export interface PostAnalytics { views?: number; likes?: number; comments?: number; shares?: number; watchTimeMinutes?: number; avgViewSeconds?: number }
-export interface AccountMetrics { followers?: number; totalViews?: number; totalLikes?: number; videoCount?: number }
+export interface AccountMetrics { followers?: number | undefined; totalViews?: number | undefined; totalLikes?: number | undefined; videoCount?: number | undefined }
 export const REVENUE_UNAVAILABLE = "Revenue data unavailable through the connected API.";
 export type EarningsResult =
   | { available: true; currency: string; days: { date: string; amount: number }[] }
