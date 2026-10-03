@@ -24,6 +24,7 @@ import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedStoryboardsRouteImport } from './routes/_authenticated/storyboards'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
+import { Route as AuthenticatedAnalyticsPostIdRouteImport } from './routes/_authenticated/analytics.$postId'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedWorkspaceProjectIdRouteImport } from './routes/_authenticated/workspace.$projectId'
@@ -106,6 +107,12 @@ const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
   path: '/videos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAnalyticsPostIdRoute =
+  AuthenticatedAnalyticsPostIdRouteImport.update({
+    id: '/$postId',
+    path: '/$postId',
+    getParentRoute: () => AuthenticatedAnalyticsRoute,
+  } as any)
 const AuthenticatedProjectsIndexRoute =
   AuthenticatedProjectsIndexRouteImport.update({
     id: '/projects/',
@@ -146,7 +153,7 @@ const ApiPublicOauthPlatformCallbackRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/characters': typeof AuthenticatedCharactersRoute
   '/create': typeof AuthenticatedCreateRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/social': typeof AuthenticatedSocialRoute
   '/storyboards': typeof AuthenticatedStoryboardsRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -168,7 +176,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/characters': typeof AuthenticatedCharactersRoute
   '/create': typeof AuthenticatedCreateRoute
@@ -180,6 +188,7 @@ export interface FileRoutesByTo {
   '/social': typeof AuthenticatedSocialRoute
   '/storyboards': typeof AuthenticatedStoryboardsRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -192,7 +201,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/characters': typeof AuthenticatedCharactersRoute
   '/_authenticated/create': typeof AuthenticatedCreateRoute
@@ -204,6 +213,7 @@ export interface FileRoutesById {
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/storyboards': typeof AuthenticatedStoryboardsRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
+  '/_authenticated/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/_authenticated/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/storyboards'
     | '/videos'
+    | '/analytics/$postId'
     | '/projects/$projectId'
     | '/workspace/$projectId'
     | '/projects/'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/storyboards'
     | '/videos'
+    | '/analytics/$postId'
     | '/projects/$projectId'
     | '/workspace/$projectId'
     | '/projects'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social'
     | '/_authenticated/storyboards'
     | '/_authenticated/videos'
+    | '/_authenticated/analytics/$postId'
     | '/_authenticated/projects/$projectId'
     | '/_authenticated/workspace/$projectId'
     | '/_authenticated/projects/'
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVideosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/analytics/$postId': {
+      id: '/_authenticated/analytics/$postId'
+      path: '/$postId'
+      fullPath: '/analytics/$postId'
+      preLoaderRoute: typeof AuthenticatedAnalyticsPostIdRouteImport
+      parentRoute: typeof AuthenticatedAnalyticsRoute
+    }
     '/_authenticated/projects/': {
       id: '/_authenticated/projects/'
       path: '/projects'
@@ -442,8 +462,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAnalyticsRouteChildren {
+  AuthenticatedAnalyticsPostIdRoute: typeof AuthenticatedAnalyticsPostIdRoute
+}
+
+const AuthenticatedAnalyticsRouteChildren: AuthenticatedAnalyticsRouteChildren =
+  {
+    AuthenticatedAnalyticsPostIdRoute: AuthenticatedAnalyticsPostIdRoute,
+  }
+
+const AuthenticatedAnalyticsRouteWithChildren =
+  AuthenticatedAnalyticsRoute._addFileChildren(
+    AuthenticatedAnalyticsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
+  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCharactersRoute: typeof AuthenticatedCharactersRoute
   AuthenticatedCreateRoute: typeof AuthenticatedCreateRoute
@@ -461,7 +495,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
+  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRouteWithChildren,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCharactersRoute: AuthenticatedCharactersRoute,
   AuthenticatedCreateRoute: AuthenticatedCreateRoute,
