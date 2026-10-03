@@ -61,6 +61,57 @@ export type Database = {
           },
         ]
       }
+      activity_log: {
+        Row: {
+          category: string
+          created_at: string
+          detail: string | null
+          event: string
+          id: string
+          job_id: string | null
+          level: string
+          project_id: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          detail?: string | null
+          event: string
+          id?: string
+          job_id?: string | null
+          level?: string
+          project_id?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          detail?: string | null
+          event?: string
+          id?: string
+          job_id?: string | null
+          level?: string
+          project_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "automation_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_snapshots: {
         Row: {
           by_platform: Json
@@ -96,6 +147,75 @@ export type Database = {
           views?: number
         }
         Relationships: []
+      }
+      automation_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          label: string
+          post_id: string | null
+          project_id: string | null
+          provider: string | null
+          provider_response: Json | null
+          result: Json | null
+          retry_count: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          label: string
+          post_id?: string | null
+          project_id?: string | null
+          provider?: string | null
+          provider_response?: Json | null
+          result?: Json | null
+          retry_count?: number
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          label?: string
+          post_id?: string | null
+          project_id?: string | null
+          provider?: string | null
+          provider_response?: Json | null
+          result?: Json | null
+          retry_count?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_jobs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       automation_settings: {
         Row: {

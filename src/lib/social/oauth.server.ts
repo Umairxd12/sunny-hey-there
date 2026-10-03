@@ -95,3 +95,24 @@ export async function refreshAccess(p: SocialPlatform, refreshToken: string): Pr
   }
   throw new Error("Facebook Page tokens cannot be refreshed — reconnect the Page.");
 }
+
+/**
+ * Revoke access at the platform when the user disconnects. Best effort: the stored tokens are
+ * deleted either way. Returns a note describing what happened at the platform.
+ */
+export async function revokeAccess(p: SocialPlatform, accessToken: string, refreshToken: string | null): Promise<string> {
+  if (!isConfigured(p)) return "Platform app keys missing — removed locally only.";
+  if (p === "youtube") {
+    const res = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refreshToken ?? accessToken)}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" } });
+    return res.ok ? "Access revoked at Google." : `Google revoke returned ${res.status} — remove the app at myaccount.google.com/permissions if it still appears.`;
+  }
+  if (p === "tiktok") {
+    const res = await fetch("https://open.tiktokapis.com/v2/oauth/revoke/", {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_key: env("TIKTOK_CLIENT_KEY"), client_secret: env("TIKTOK_CLIENT_SECRET"), token: accessToken }),
+    });
+    return res.ok ? "Access revoked at TikTok." : `TikTok revoke returned ${res.status} — remove the app in TikTok settings if it still appears.`;
+  }
+  // Page tokens can't revoke the whole app grant; the user removes it under Facebook Settings → Business integrations.
+  return "Tokens deleted. To fully remove access, open Facebook Settings → Business integrations and remove this app.";
+}

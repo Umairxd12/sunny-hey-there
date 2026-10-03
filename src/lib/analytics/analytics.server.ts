@@ -13,6 +13,10 @@ export async function syncUserAnalytics(userId: string, trigger: "manual" | "aut
   const results: { platform: string; account: string; ok: boolean; message?: string }[] = [];
   const totals = { followers: 0, views: 0, likes: 0, comments: 0, shares: 0 };
   const byPlatform: Record<string, typeof totals> = {};
+  if (!(accounts ?? []).length) return results;
+  const { startJob, finishJob, logActivity } = await import("@/lib/jobs/jobs.server");
+  const jobId = await startJob({ userId, kind: "analytics_sync", label: `Analytics sync (${trigger === "manual" ? "manual" : "hourly"})` });
+
 
   for (const acc of accounts ?? []) {
     const started = new Date().toISOString();
@@ -55,7 +59,11 @@ export async function syncUserAnalytics(userId: string, trigger: "manual" | "aut
   }
 
   for (const b of Object.values(byPlatform)) { totals.followers += b.followers; totals.views += b.views; totals.likes += b.likes; totals.comments += b.comments; totals.shares += b.shares; }
-  if ((accounts ?? []).length) await db.from("analytics_snapshots").insert({ user_id: userId, ...totals, by_platform: byPlatform });
+  await db.from("analytics_snapshots").insert({ user_id: userId, ...totals, by_platform: byPlatform });
+  const failed = results.filter((r) => !r.ok);
+  await finishJob(jobId, { status: failed.length === results.length ? "failed" : "succeeded", result: { accounts: results }, error: failed.length ? failed.map((f) => `${f.platform} ${f.account}: ${f.message}`).join(" | ") : null });
+  for (const f of failed) await logActivity({ userId, category: "analytics", level: "error", jobId, event: `${f.platform} analytics sync failed`, detail: `${f.account}: ${f.message}` });
+  if (trigger === "manual" && !failed.length) await logActivity({ userId, category: "analytics", level: "success", jobId, event: "Analytics synced", detail: `${results.length} account(s)` });
   return results;
 }
 

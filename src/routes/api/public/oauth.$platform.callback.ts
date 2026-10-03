@@ -28,9 +28,13 @@ export const Route = createFileRoute("/api/public/oauth/$platform/callback")({
           const accounts = await exchangeCode(platform as any, code, row.redirect_uri, row.code_verifier);
           if (!accounts.length) return back(url.origin, { error: `No ${platform === "facebook" ? "Pages" : "channels"} were authorized.` });
           await saveConnectedAccounts(row.user_id, platform as any, accounts);
+          const { logActivity } = await import("@/lib/jobs/jobs.server");
+          await logActivity({ userId: row.user_id, category: "security", level: "success", event: `${platform === "youtube" ? "YouTube" : platform === "tiktok" ? "TikTok" : "Facebook"} ${row.reconnect_account_id ? "reconnected" : "connected"}`, detail: accounts.map((a) => a.profile.name).join(", ") });
           return back(url.origin, { connected: platform, count: String(accounts.length) });
         } catch (e) {
           console.error("OAuth callback failed", e);
+          const { logActivity } = await import("@/lib/jobs/jobs.server");
+          await logActivity({ userId: row.user_id, category: "security", level: "error", event: `${platform} connection failed`, detail: (e as Error).message.slice(0, 300) });
           return back(url.origin, { error: (e as Error).message.slice(0, 300) });
         }
       },

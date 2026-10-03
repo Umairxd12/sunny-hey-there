@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { STAGES, type ProjectStatus } from "../pipeline";
+import { STAGES, STAGE_DONE_EVENT, type ProjectStatus } from "../pipeline";
 import { ProviderNotConfiguredError, type TextGenerationProvider } from "./types";
 import { getTextProvider, getVideoAnalysisProvider, getVideoEditingProvider, getVideoGenerationProvider } from "./registry.server";
 
@@ -169,9 +169,15 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
   }
   await db.from("projects").update({ status: runningStatus, current_stage: stageKey, last_error: null, skill_version_id: skill.id }).eq("id", projectId);
 
+  const { startJob, finishJob, logActivity } = await import("../jobs/jobs.server");
+  const jobId = await startJob({ userId, kind: "pipeline_stage", label: `${stage.label} — ${project.title}`, projectId });
+
   const fail = async (message: string, blocked = false): Promise<StageResult> => {
     await db.from("pipeline_steps").update({ status: blocked ? "blocked" : "failed", error: message, finished_at: now() }).eq("project_id", projectId).eq("step_key", stageKey);
     await db.from("projects").update({ status: blocked ? runningStatus : "FAILED", last_error: message }).eq("id", projectId);
+    await finishJob(jobId, { status: blocked ? "blocked" : "failed", error: message });
+    await logActivity({ userId, category: "production", level: blocked ? "warning" : "error", projectId, jobId,
+      event: blocked ? `${stage.label} waiting for a connection` : `${stage.label} failed`, detail: `${project.title}: ${message}` });
     return { ok: false, error: message, blocked };
   };
 
@@ -198,10 +204,18 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
     if (stageKey === "characters") await db.from("characters").insert({ project_id: projectId, user_id: userId, name: `${project.title} cast`, description: output });
     const isLast = idx === STAGES.length - 1;
     await db.from("projects").update({ status: isLast ? "COMPLETED" : runningStatus }).eq("id", projectId);
+    await finishJob(jobId, { status: "succeeded", provider: model, result: { stage: stageKey, characters: output.length, redo: isRedo } });
+    await logActivity({ userId, category: "production", level: "success", projectId, jobId, event: STAGE_DONE_EVENT[stageKey] ?? `${stage.label} done`, detail: project.title });
     if (isLast) {
       // Completed videos become READY posts (or SCHEDULED when auto-publish is on).
       const { queueCompletedProject } = await import("../automation/automation.server");
-      await queueCompletedProject(db, userId, projectId).catch((e) => console.error("queueCompletedProject failed", e));
+      try {
+        const queued = await queueCompletedProject(db, userId, projectId);
+        await logActivity({ userId, category: "publishing", level: "info", projectId, event: "Added to content calendar", detail: queued });
+      } catch (e) {
+        console.error("queueCompletedProject failed", e);
+        await logActivity({ userId, category: "publishing", level: "error", projectId, event: "Could not add to content calendar", detail: (e as Error).message });
+      }
     }
     return { ok: true };
   } catch (e) {

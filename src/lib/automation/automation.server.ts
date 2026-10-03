@@ -24,9 +24,9 @@ const rule = (s: Settings): ScheduleRule => ({ timezone: s.timezone, frequency: 
  * Called when a project reaches COMPLETED. Auto-publish OFF → READY posts; ON → SCHEDULED posts
  * at the next free slot. One post per target account, keyed so it can never be created twice.
  */
-export async function queueCompletedProject(db: Db, userId: string, projectId: string) {
+export async function queueCompletedProject(db: Db, userId: string, projectId: string): Promise<string> {
   const { data: project } = await db.from("projects").select("id, title, auto_publish").eq("id", projectId).single();
-  if (!project) return;
+  if (!project) return "Project not found.";
   const settings = await loadSettings(db, userId);
   const { data: video } = await db.from("videos").select("id").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const { data: linked } = await db.from("project_social_accounts").select("account_id").eq("project_id", projectId);
@@ -48,8 +48,13 @@ export async function queueCompletedProject(db: Db, userId: string, projectId: s
         status_detail: automatic && !slot ? "No upcoming publishing time in your automation settings." : null }))
     : [{ ...base, platform: "unassigned", idempotency_key: `${projectId}:${video?.id ?? "novideo"}:none`, status: "READY", automated: false,
         status_detail: "No publishing account selected yet." }];
-  await db.from("scheduled_posts").upsert(rows, { onConflict: "idempotency_key", ignoreDuplicates: true });
+  const { error } = await db.from("scheduled_posts").upsert(rows, { onConflict: "idempotency_key", ignoreDuplicates: true });
+  if (error) throw new Error(error.message);
+  if (!targets.length) return `${project.title}: ready — no publishing account selected yet.`;
+  return slot ? `${project.title}: scheduled for ${targets.length} account(s) at ${slot.toISOString()}.` : `${project.title}: ready to publish on ${targets.length} account(s).`;
 }
+
+const platformName = (p: string) => PLATFORM_INFO[p as SocialPlatform]?.name ?? p;
 
 /** Localized, platform-specific metadata. Falls back to existing text when no text AI is available. */
 export async function localizeMetadata(input: { platform: string; country: string; title: string; idea: string; metadataStage: string }) {
@@ -86,7 +91,9 @@ export async function processDuePosts(batch = 5) {
       .eq("status", "PUBLISHING").is("external_post_id", null).lt("locked_until", now);
     await db.from("scheduled_posts").update({ status: "PROCESSING" }).eq("status", "PUBLISHING").not("external_post_id", "is", null).lt("locked_until", now);
 
-    // 2) Track processing status of posts already accepted by a platform.
+    const { startJob, finishJob, logActivity } = await import("@/lib/jobs/jobs.server");
+
+    // 2) Track processing status of posts already accepted by a platform. Only state changes are logged as jobs.
     const { data: processing } = await db.from("scheduled_posts").select("*").eq("status", "PROCESSING").limit(batch);
     for (const p of processing ?? []) {
       try {
@@ -95,9 +102,12 @@ export async function processDuePosts(batch = 5) {
         if (st.status === "published") {
           await db.from("scheduled_posts").update({ status: "PUBLISHED", published_at: new Date().toISOString(), status_detail: st.detail ?? null, updated_at: new Date().toISOString() }).eq("id", p.id);
           await db.from("social_accounts").update({ last_published_at: new Date().toISOString(), last_published_title: p.title }).eq("id", p.social_account_id!);
+          await logActivity({ userId: p.user_id, category: "publishing", level: "success", projectId: p.project_id, event: `${platformName(platform)} published`, detail: p.title ?? "" });
           report.published++;
         } else if (st.status === "failed") {
-          await db.from("scheduled_posts").update({ status: "FAILED", last_error: `${platform} rejected the video: ${st.detail ?? "no reason given"}` }).eq("id", p.id);
+          const reason = `${platformName(platform)} rejected the video: ${st.detail ?? "no reason given"}`;
+          await db.from("scheduled_posts").update({ status: "FAILED", last_error: reason }).eq("id", p.id);
+          await logActivity({ userId: p.user_id, category: "publishing", level: "error", projectId: p.project_id, event: `${platformName(platform)} publish failed`, detail: reason });
           report.failed++;
         } else report.processing++;
       } catch (e) {
@@ -112,9 +122,12 @@ export async function processDuePosts(batch = 5) {
       if (settings.emergency_stop) { report.paused++; continue; }
       const { data: claimed } = await db.rpc("claim_scheduled_post", { _id: p.id, _seconds: 600 });
       if (!claimed) continue;
+      const jobId = await startJob({ userId: p.user_id, kind: "publish", label: `Publish to ${platformName(p.platform)} — ${p.title ?? "Untitled"}`, projectId: p.project_id, postId: p.id, provider: p.platform, retryCount: p.attempts });
       try {
         if (p.external_post_id) { // already accepted earlier — track instead of re-posting
-          await db.from("scheduled_posts").update({ status: "PROCESSING" }).eq("id", p.id); continue;
+          await db.from("scheduled_posts").update({ status: "PROCESSING" }).eq("id", p.id);
+          await finishJob(jobId, { status: "skipped", result: { reason: "Already accepted by the platform — tracking instead of re-posting.", externalPostId: p.external_post_id } });
+          continue;
         }
         if (!p.social_account_id) throw new Error("No publishing account selected.");
         const { data: video } = p.video_id ? await db.from("videos").select("video_url").eq("id", p.video_id).maybeSingle() : { data: null };
@@ -140,15 +153,21 @@ export async function processDuePosts(batch = 5) {
         // Store the platform ID immediately — this is what prevents any duplicate post later.
         await db.from("scheduled_posts").update({ external_post_id: res.externalPostId, published_url: res.url ?? null, status: res.status === "published" ? "PUBLISHED" : "PROCESSING",
           published_at: res.status === "published" ? new Date().toISOString() : null, last_error: null, attempts: p.attempts + 1, updated_at: new Date().toISOString() }).eq("id", p.id);
+        await finishJob(jobId, { status: "succeeded", providerResponse: res, result: { externalPostId: res.externalPostId, url: res.url ?? null, status: res.status }, retryCount: p.attempts + 1 });
+        await logActivity({ userId: p.user_id, category: "publishing", level: "success", projectId: p.project_id, jobId,
+          event: res.status === "published" ? `${platformName(platform)} published` : `${platformName(platform)} accepted the video — processing`, detail: title ?? "" });
         report.processing++;
       } catch (e) {
         const msg = (e as Error).message.slice(0, 500);
         const attempts = p.attempts + 1;
         const retry = isRetryable(msg) && attempts < p.max_attempts;
+        const nextAt = retry ? new Date(Date.now() + 5 * 60_000 * 2 ** (attempts - 1)).toISOString() : p.next_attempt_at;
         await db.from("scheduled_posts").update({
-          status: retry ? "RETRYING" : "FAILED", attempts, last_error: msg, locked_until: null,
-          next_attempt_at: retry ? new Date(Date.now() + 5 * 60_000 * 2 ** (attempts - 1)).toISOString() : p.next_attempt_at, updated_at: new Date().toISOString(),
+          status: retry ? "RETRYING" : "FAILED", attempts, last_error: msg, locked_until: null, next_attempt_at: nextAt, updated_at: new Date().toISOString(),
         }).eq("id", p.id);
+        await finishJob(jobId, { status: retry ? "retrying" : "failed", error: msg, retryCount: attempts, result: retry ? { nextAttemptAt: nextAt } : null });
+        await logActivity({ userId: p.user_id, category: "publishing", level: retry ? "warning" : "error", projectId: p.project_id, jobId,
+          event: retry ? `${platformName(p.platform)} publish will retry (attempt ${attempts} of ${p.max_attempts})` : `${platformName(p.platform)} publish failed`, detail: msg });
         retry ? report.retrying++ : report.failed++;
       }
     }
