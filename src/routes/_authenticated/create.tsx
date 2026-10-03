@@ -53,7 +53,7 @@ function CreateVideo() {
     }
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, autostart = false) {
     e.preventDefault();
     if (!idea.trim()) { toast.error("Write an idea or pick a suggested one."); return; }
     setBusy(true);
@@ -67,13 +67,13 @@ function CreateVideo() {
       .select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "Could not create project"); return; }
-    navigate({ to: "/projects/$projectId", params: { projectId: data.id } });
+    navigate({ to: "/projects/$projectId", params: { projectId: data.id }, search: { ...(autostart ? { autostart: "1" as const } : {}) } });
   }
 
   return (
     <>
       <PageHeader title="Create video" description="Step 1 — describe your idea. The studio then walks it through every production step." />
-      <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+      <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
         <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -113,7 +113,11 @@ function CreateVideo() {
         <div className="space-y-1.5"><Label htmlFor="refs">References (optional)</Label><Textarea id="refs" rows={2} value={refs} onChange={(e) => setRefs(e.target.value)} placeholder="Links or notes: a character you like, a scene, a mood…" /></div>
         <div className="space-y-1.5"><Label htmlFor="sty">Visual style notes (optional)</Label><Input id="sty" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="Pixar-like, soft pastel lighting" /></div>
         <div className="space-y-1.5"><Label htmlFor="req">Video requirements (optional)</Label><Textarea id="req" rows={3} value={reqs} onChange={(e) => setReqs(e.target.value)} placeholder="No text on screen, end with a logo shot, kid-safe…" /></div>
-        <Button disabled={busy}>{busy ? "Creating…" : "Create project"}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy}>{busy ? "Creating…" : "Create & generate video — 1 click"}</Button>
+          <Button type="button" variant="outline" disabled={busy} onClick={(e) => submit(e as unknown as React.FormEvent, false)}>Create project only</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">“Create & generate” runs the whole skill-driven pipeline automatically — meta prompt, QA, characters, world, storyboard, video prompt, video generation, review, edits, final QA and metadata — then shows you the finished video to approve.</p>
       </form>
     </>
   );

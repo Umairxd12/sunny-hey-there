@@ -1,28 +1,35 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Check, ChevronDown, Loader2, Lock, Play, RotateCcw } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Loader2, Lock, Play, RotateCcw, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, StatusBadge } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LOCKED_STAGES, STAGES, nextRunnableIndex } from "@/lib/pipeline";
-import { runPipelineStep } from "@/lib/pipeline.functions";
+import { delegateVideoToWorker, getEngineStatus, runPipelineStep } from "@/lib/pipeline.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+  validateSearch: (search: Record<string, unknown>): { autostart?: "1" } =>
+    search["autostart"] === "1" ? { autostart: "1" } : {},
   head: () => pageHead("Production", "Step-by-step production pipeline for a video."),
   component: ProjectPage,
 });
 
 function ProjectPage() {
   const { projectId } = Route.useParams();
+  const { autostart } = Route.useSearch();
   const qc = useQueryClient();
   const run = useServerFn(runPipelineStep);
+  const delegate = useServerFn(delegateVideoToWorker);
+  const engineStatus = useServerFn(getEngineStatus);
   const [running, setRunning] = useState<string | null>(null);
+  const [runningAll, setRunningAll] = useState(false);
+  const autoStarted = useRef(false);
 
   const { data } = useQuery({
     queryKey: ["project", projectId],
@@ -55,6 +62,50 @@ function ProjectPage() {
     }
   }
 
+  /** One click: runs every remaining stage in order. Text stages run here; the
+   *  video stage goes to the connected video provider, or to the video worker
+   *  queue when no provider is connected. */
+  async function runAll() {
+    if (runningAll || running) return;
+    setRunningAll(true);
+    try {
+      let engine: { providers: { capability: string; configured: boolean }[] } | null = null;
+      for (const stage of STAGES) {
+        const { data: fresh } = await supabase.from("pipeline_steps").select("step_key, status").eq("project_id", projectId);
+        if (fresh?.some((s) => s.step_key === stage.key && s.status === "done")) continue;
+        setRunning(stage.key);
+        if (stage.key === "generate_video") {
+          if (!engine) engine = await engineStatus();
+          const videoReady = engine?.providers.some((p) => p.capability === "video_generation" && p.configured);
+          if (videoReady) {
+            const res = await run({ data: { projectId, stepKey: stage.key } });
+            if (!res.ok) { toast.error(res.error); break; }
+            continue;
+          }
+          const d = await delegate({ data: { projectId } });
+          if (!d.ok) { toast.error(d.error); break; }
+          toast.success("Video queued — the worker is generating it now. You can close this page; the video will appear in Videos when ready.");
+          break;
+        }
+        const res = await run({ data: { projectId, stepKey: stage.key } });
+        if (!res.ok) { toast.error(`Stopped at "${stage.label}": ${res.error}`); break; }
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setRunning(null);
+      setRunningAll(false);
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+    }
+  }
+
+  useEffect(() => {
+    if (autostart && !autoStarted.current && data?.project) {
+      autoStarted.current = true;
+      runAll();
+    }
+  }, [autostart, data?.project]);
+
   return (
     <>
       <PageHeader title={project.title} description={project.idea}
@@ -64,6 +115,15 @@ function ProjectPage() {
           <span className="flex items-center gap-2 font-medium">Current status <StatusBadge status={project.status} /></span>
           <span className="text-muted-foreground">{doneCount} of {STAGES.length} stages done</span>
         </div>
+        {doneCount < STAGES.length && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-secondary/60 p-4">
+            <Button size="lg" disabled={runningAll || !!running} onClick={runAll}>
+              {runningAll || running ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+              {runningAll || running ? `Working… ${STAGES.find((s) => s.key === running)?.label ?? ""}` : "Generate video — 1 click"}
+            </Button>
+            <p className="max-w-md text-xs text-muted-foreground">Runs every remaining stage automatically, exactly as your active skill defines. The video itself is generated by your connected video provider — or queued for the studio video worker when none is connected.</p>
+          </div>
+        )}
         <Progress className="mt-3" value={(doneCount / STAGES.length) * 100} />
         <p className="mt-3 text-sm">
           {doneCount === STAGES.length ? "Your video is finished." : <>Your video is now at <span className="font-semibold">Step {nextIdx + 1} · {STAGES[nextIdx]?.label}</span></>}
@@ -74,7 +134,7 @@ function ProjectPage() {
         <ol className="mt-5 flex gap-1 overflow-x-auto pb-1" aria-label="Production timeline">
           {STAGES.map((def, i) => {
             const s = running === def.key ? "running" : stepOf(def.key)?.status ?? "pending";
-            const dot = s === "done" ? "bg-primary text-primary-foreground" : s === "running" ? "bg-primary/20 text-primary ring-2 ring-primary" : s === "failed" ? "bg-destructive text-destructive-foreground" : s === "blocked" ? "bg-accent text-accent-foreground ring-2 ring-border" : i === nextIdx ? "bg-secondary ring-2 ring-primary" : "bg-secondary text-muted-foreground";
+            const dot = s === "done" ? "bg-primary text-primary-foreground" : s === "running" || s === "queued" ? "bg-primary/20 text-primary ring-2 ring-primary" : s === "failed" ? "bg-destructive text-destructive-foreground" : s === "blocked" ? "bg-accent text-accent-foreground ring-2 ring-border" : i === nextIdx ? "bg-secondary ring-2 ring-primary" : "bg-secondary text-muted-foreground";
             return (
               <li key={def.key} className="flex min-w-[76px] flex-1 flex-col items-center gap-1.5 text-center">
                 <div className="flex w-full items-center">
@@ -110,6 +170,8 @@ function ProjectPage() {
                   </div>
                   {st?.status === "blocked" ? (
                     <Button size="sm" variant="outline" asChild><Link to="/providers">Connect provider</Link></Button>
+                  ) : st?.status === "queued" ? (
+                    <Button size="sm" variant="outline" disabled><Loader2 className="size-4 animate-spin" />Queued — worker is generating</Button>
                   ) : (
                     <Button size="sm" variant={st?.status === "done" ? "outline" : "default"} disabled={!canRun} onClick={() => runStep(def.key)}>
                       {running === def.key ? <Loader2 className="size-4 animate-spin" /> : st?.status === "done" ? <RotateCcw className="size-4" /> : <Play className="size-4" />}

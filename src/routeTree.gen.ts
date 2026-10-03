@@ -31,6 +31,8 @@ import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_au
 import { Route as AuthenticatedWorkspaceProjectIdRouteImport } from './routes/_authenticated/workspace.$projectId'
 import { Route as ApiPublicHooksPublishDueRouteImport } from './routes/api/public/hooks/publish-due'
 import { Route as ApiPublicHooksSyncAnalyticsRouteImport } from './routes/api/public/hooks/sync-analytics'
+import { Route as ApiPublicHooksVideoJobUploadRouteImport } from './routes/api/public/hooks/video-job-upload'
+import { Route as ApiPublicHooksVideoJobsRouteImport } from './routes/api/public/hooks/video-jobs'
 import { Route as ApiPublicOauthPlatformCallbackRouteImport } from './routes/api/public/oauth.$platform.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -149,6 +151,17 @@ const ApiPublicHooksSyncAnalyticsRoute =
     path: '/api/public/hooks/sync-analytics',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVideoJobUploadRoute =
+  ApiPublicHooksVideoJobUploadRouteImport.update({
+    id: '/api/public/hooks/video-job-upload',
+    path: '/api/public/hooks/video-job-upload',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksVideoJobsRoute = ApiPublicHooksVideoJobsRouteImport.update({
+  id: '/api/public/hooks/video-jobs',
+  path: '/api/public/hooks/video-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOauthPlatformCallbackRoute =
   ApiPublicOauthPlatformCallbackRouteImport.update({
     id: '/api/public/oauth/$platform/callback',
@@ -178,6 +191,8 @@ export interface FileRoutesByFullPath {
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
+  '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -202,6 +217,8 @@ export interface FileRoutesByTo {
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
+  '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesById {
@@ -228,6 +245,8 @@ export interface FileRoutesById {
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
   '/api/public/hooks/sync-analytics': typeof ApiPublicHooksSyncAnalyticsRoute
+  '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
+  '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRouteTypes {
@@ -254,6 +273,8 @@ export interface FileRouteTypes {
     | '/projects/'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-job-upload'
+    | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -278,6 +299,8 @@ export interface FileRouteTypes {
     | '/projects'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-job-upload'
+    | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
   id:
     | '__root__'
@@ -303,6 +326,8 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/'
     | '/api/public/hooks/publish-due'
     | '/api/public/hooks/sync-analytics'
+    | '/api/public/hooks/video-job-upload'
+    | '/api/public/hooks/video-jobs'
     | '/api/public/oauth/$platform/callback'
   fileRoutesById: FileRoutesById
 }
@@ -312,6 +337,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiPublicHooksPublishDueRoute: typeof ApiPublicHooksPublishDueRoute
   ApiPublicHooksSyncAnalyticsRoute: typeof ApiPublicHooksSyncAnalyticsRoute
+  ApiPublicHooksVideoJobUploadRoute: typeof ApiPublicHooksVideoJobUploadRoute
+  ApiPublicHooksVideoJobsRoute: typeof ApiPublicHooksVideoJobsRoute
   ApiPublicOauthPlatformCallbackRoute: typeof ApiPublicOauthPlatformCallbackRoute
 }
 
@@ -471,6 +498,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/video-job-upload': {
+      id: '/api/public/hooks/video-job-upload'
+      path: '/api/public/hooks/video-job-upload'
+      fullPath: '/api/public/hooks/video-job-upload'
+      preLoaderRoute: typeof ApiPublicHooksVideoJobUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/video-jobs': {
+      id: '/api/public/hooks/video-jobs'
+      path: '/api/public/hooks/video-jobs'
+      fullPath: '/api/public/hooks/video-jobs'
+      preLoaderRoute: typeof ApiPublicHooksVideoJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/$platform/callback': {
       id: '/api/public/oauth/$platform/callback'
       path: '/api/public/oauth/$platform/callback'
@@ -542,6 +583,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiPublicHooksPublishDueRoute: ApiPublicHooksPublishDueRoute,
   ApiPublicHooksSyncAnalyticsRoute: ApiPublicHooksSyncAnalyticsRoute,
+  ApiPublicHooksVideoJobUploadRoute: ApiPublicHooksVideoJobUploadRoute,
+  ApiPublicHooksVideoJobsRoute: ApiPublicHooksVideoJobsRoute,
   ApiPublicOauthPlatformCallbackRoute: ApiPublicOauthPlatformCallbackRoute,
 }
 export const routeTree = rootRouteImport

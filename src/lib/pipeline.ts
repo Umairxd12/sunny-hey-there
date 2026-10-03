@@ -81,7 +81,7 @@ export const STATUS_LABEL: Record<ProjectStatus, string> = {
   COMPLETED: "Completed", FAILED: "Failed",
 };
 
-export type StepStatus = "pending" | "running" | "done" | "failed" | "blocked";
+export type StepStatus = "pending" | "queued" | "running" | "done" | "failed" | "blocked";
 
 /** Returns the index of the first stage that is not done — the only stage allowed to run next (or any done stage, to redo). */
 export function nextRunnableIndex(done: (key: string) => boolean): number {

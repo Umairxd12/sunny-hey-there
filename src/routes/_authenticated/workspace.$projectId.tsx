@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Copy, Download, Film, Loader2, Music, RefreshCw, Scissors, Send, Sparkles, Trash2, Undo2, CalendarClock, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Download, Film, Loader2, Music, RefreshCw, Scissors, Send, Sparkles, Trash2, Undo2, CalendarClock, Star, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, StatusBadge } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { getEditingRecommendations, regenerateClip, renderMaster } from "@/lib/workspace.functions";
+import { approveAndPublishNow, rejectProject } from "@/lib/automation.functions";
 import { pageHead } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -34,6 +35,8 @@ function Workspace() {
   const recommend = useServerFn(getEditingRecommendations);
   const regen = useServerFn(regenerateClip);
   const render = useServerFn(renderMaster);
+  const approve = useServerFn(approveAndPublishNow);
+  const reject = useServerFn(rejectProject);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [recs, setRecs] = useState<string | null>(null);
@@ -312,6 +315,31 @@ function Workspace() {
             const a = assets.find((x) => x.kind === k);
             return <div key={k} className="rounded-xl bg-secondary p-3 text-sm"><div className="font-medium">{l}</div><div className="text-xs text-muted-foreground">{a ? new Date(a.created_at).toLocaleString() : "Not created yet"}</div></div>;
           })}
+        </div>
+        {/* Review decision: approve = auto-upload to connected social accounts, reject = never uploaded */}
+        <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <h4 className="font-semibold">Review decision</h4>
+          <p className="mt-1 text-sm text-muted-foreground">Approve sends this video to your connected social accounts automatically within minutes. Reject cancels every queued post — the video is never uploaded.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button disabled={!finalAsset || !!busy} onClick={async () => {
+              setBusy("approve");
+              const r = await approve({ data: { projectId } });
+              setBusy(null);
+              if (r.ok) { toast.success(`Approved — publishing to ${r.queued} account(s) now.`); } else { toast.error(r.error); }
+              refresh();
+            }}>
+              {busy === "approve" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}Approve & publish now</Button>
+            <Button variant="destructive" disabled={!finalAsset || !!busy} onClick={async () => {
+              if (!window.confirm("Reject this video? It will never be uploaded to your social accounts.")) return;
+              setBusy("reject");
+              const r = await reject({ data: { projectId } });
+              setBusy(null);
+              if (r.ok) { toast.success("Rejected — this video will not be published."); } else { toast.error(r.error); }
+              refresh();
+            }}>
+              {busy === "reject" ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Reject video</Button>
+          </div>
+          {!finalAsset && <p className="mt-2 text-xs text-muted-foreground">Approve and Reject unlock once a final video exists.</p>}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" disabled={!finalAsset?.url} asChild={!!finalAsset?.url}>

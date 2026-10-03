@@ -95,3 +95,78 @@ export const retryPost = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("scheduled_posts").update({ status: "RETRYING", next_attempt_at: new Date().toISOString(), attempts: 0, locked_until: null, updated_at: new Date().toISOString() }).eq("id", data.postId);
     return error ? { ok: false as const, error: error.message } : { ok: true as const };
   });
+
+/** Review gate: APPROVE. Queues the finished video for immediate publishing to
+ *  every connected account linked to the project. The publish-due worker picks
+ *  the posts up within minutes and uploads them to the social platforms. */
+export const approveAndPublishNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id, title, target_platform").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+
+    const { data: finalAsset } = await db.from("video_assets").select("url").eq("project_id", data.projectId).eq("kind", "final").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: videoRow } = await db.from("videos").select("id").eq("project_id", data.projectId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!finalAsset?.url && !videoRow) return { ok: false as const, error: "No finished video yet — generate the video first." };
+
+    // Caption + hashtags from the metadata stage (same parsing as the workspace).
+    const { data: meta } = await db.from("pipeline_steps").select("output").eq("project_id", data.projectId).eq("step_key", "metadata").maybeSingle();
+    const metaText = meta?.output ?? "";
+    const hashtags = Array.from(new Set(metaText.match(/#[\p{L}\p{N}_]+/gu) ?? [])).join(" ");
+    const caption = metaText.match(/caption[^\n]*:\s*(.+)/i)?.[1]?.trim() ?? "";
+
+    // Target accounts: linked to the project, else the automation defaults — only connected ones.
+    const { data: linked } = await db.from("project_social_accounts").select("account_id").eq("project_id", data.projectId);
+    let accountIds = (linked ?? []).map((l) => l.account_id);
+    if (!accountIds.length) {
+      const { loadSettings } = await import("./automation/automation.server");
+      accountIds = (await loadSettings(db, context.userId)).account_ids;
+    }
+    const { data: accounts } = accountIds.length
+      ? await db.from("social_accounts").select("id, platform, account_name").in("id", accountIds).eq("status", "connected")
+      : { data: [] as { id: string; platform: string; account_name: string | null }[] };
+    if (!accounts?.length) return { ok: false as const, error: "No connected social account. Connect one on the Social accounts page first." };
+
+    // Never touch a post the platform already received — approving twice must not re-publish.
+    // Also skip posts currently being published by the worker/cron.
+    const { data: sent } = await db.from("scheduled_posts").select("social_account_id").eq("project_id", data.projectId)
+      .or("external_post_id.not.is.null,status.in.(PUBLISHING,PROCESSING,PUBLISHED)");
+    const sentIds = new Set((sent ?? []).map((s) => s.social_account_id));
+    const targets = accounts.filter((a) => !sentIds.has(a.id));
+    if (!targets.length) return { ok: false as const, error: "This video was already sent to every connected account." };
+
+    const now = new Date().toISOString();
+    const rows = targets.map((a) => ({
+      user_id: context.userId, project_id: data.projectId, video_id: videoRow?.id ?? null,
+      platform: a.platform, social_account_id: a.id, title: project.title, caption: caption || null, hashtags: hashtags || null,
+      status: "SCHEDULED", scheduled_for: now, next_attempt_at: now, attempts: 0, automated: false,
+      idempotency_key: `${data.projectId}:${videoRow?.id ?? "novideo"}:${a.id}`,
+      status_detail: "Approved — publishing now.",
+    }));
+    const { error } = await db.from("scheduled_posts").upsert(rows, { onConflict: "idempotency_key" });
+    if (error) return { ok: false as const, error: error.message };
+    await db.from("production_history").insert({ project_id: data.projectId, action: "Approved — publishing now", detail: `Queued for ${targets.length} account(s).` });
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "publishing", level: "success", projectId: data.projectId, event: "Video approved — publishing now", detail: `${project.title} → ${targets.length} account(s)` });
+    return { ok: true as const, queued: targets.length };
+  });
+
+/** Review gate: REJECT. Cancels every queued post for the project so nothing is
+ *  ever uploaded. Already-published posts are never touched. */
+export const rejectProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    const { data: cancelled } = await db.from("scheduled_posts").update({ status: "CANCELLED", status_detail: "Rejected by the owner — never published.", updated_at: new Date().toISOString() })
+      .eq("project_id", data.projectId).is("external_post_id", null)
+      .in("status", ["DRAFT", "READY", "SCHEDULED", "RETRYING", "FAILED"]).select("id");
+    await db.from("production_history").insert({ project_id: data.projectId, action: "Rejected — will not be published", detail: `${cancelled?.length ?? 0} queued post(s) cancelled.` });
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "publishing", level: "warning", projectId: data.projectId, event: "Video rejected — will not be published", detail: `${cancelled?.length ?? 0} queued post(s) cancelled.` });
+    return { ok: true as const, cancelled: cancelled?.length ?? 0 };
+  });

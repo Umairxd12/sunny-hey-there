@@ -32,6 +32,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   running: { label: "Running", cls: "bg-primary/15 text-primary" },
   failed: { label: "Failed", cls: "bg-destructive/15 text-destructive" },
   pending: { label: "Waiting", cls: "bg-muted text-muted-foreground" },
+  queued: { label: "Queued for video worker", cls: "bg-primary/15 text-primary" },
   blocked: { label: "Not connected", cls: "bg-warning/20 text-foreground" },
   connected: { label: "Connected", cls: "bg-success/15 text-success" },
   not_connected: { label: "Not connected", cls: "bg-warning/20 text-foreground" },
