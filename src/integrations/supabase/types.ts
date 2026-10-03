@@ -49,6 +49,36 @@ export type Database = {
           },
         ]
       }
+      oauth_states: {
+        Row: {
+          code_verifier: string | null
+          created_at: string
+          platform: string
+          reconnect_account_id: string | null
+          redirect_uri: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          created_at?: string
+          platform: string
+          reconnect_account_id?: string | null
+          redirect_uri: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          created_at?: string
+          platform?: string
+          reconnect_account_id?: string | null
+          redirect_uri?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pipeline_steps: {
         Row: {
           created_at: string
@@ -193,6 +223,42 @@ export type Database = {
         }
         Relationships: []
       }
+      project_social_accounts: {
+        Row: {
+          account_id: string
+          created_at: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          project_id: string
+          user_id?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_social_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_social_accounts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           aspect_ratio: string
@@ -277,9 +343,12 @@ export type Database = {
           external_post_id: string | null
           hashtags: string | null
           id: string
+          last_error: string | null
+          options: Json
           platform: string
           project_id: string | null
           scheduled_for: string | null
+          social_account_id: string | null
           status: string
           title: string | null
           user_id: string
@@ -291,9 +360,12 @@ export type Database = {
           external_post_id?: string | null
           hashtags?: string | null
           id?: string
+          last_error?: string | null
+          options?: Json
           platform: string
           project_id?: string | null
           scheduled_for?: string | null
+          social_account_id?: string | null
           status?: string
           title?: string | null
           user_id?: string
@@ -305,9 +377,12 @@ export type Database = {
           external_post_id?: string | null
           hashtags?: string | null
           id?: string
+          last_error?: string | null
+          options?: Json
           platform?: string
           project_id?: string | null
           scheduled_for?: string | null
+          social_account_id?: string | null
           status?: string
           title?: string | null
           user_id?: string
@@ -319,6 +394,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_posts_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -430,29 +512,88 @@ export type Database = {
       social_accounts: {
         Row: {
           account_name: string | null
+          avatar_url: string | null
           created_at: string
+          external_id: string | null
           id: string
+          last_error: string | null
+          last_published_at: string | null
+          last_published_title: string | null
+          last_sync_at: string | null
           platform: string
+          scopes: string[]
           status: string
+          token_expires_at: string | null
+          token_status: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           account_name?: string | null
+          avatar_url?: string | null
           created_at?: string
+          external_id?: string | null
           id?: string
+          last_error?: string | null
+          last_published_at?: string | null
+          last_published_title?: string | null
+          last_sync_at?: string | null
           platform: string
+          scopes?: string[]
           status?: string
+          token_expires_at?: string | null
+          token_status?: string
+          updated_at?: string
           user_id?: string
         }
         Update: {
           account_name?: string | null
+          avatar_url?: string | null
           created_at?: string
+          external_id?: string | null
           id?: string
+          last_error?: string | null
+          last_published_at?: string | null
+          last_published_title?: string | null
+          last_sync_at?: string | null
           platform?: string
+          scopes?: string[]
           status?: string
+          token_expires_at?: string | null
+          token_status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      social_tokens: {
+        Row: {
+          access_token_enc: string
+          account_id: string
+          refresh_token_enc: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_enc: string
+          account_id: string
+          refresh_token_enc?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_enc?: string
+          account_id?: string
+          refresh_token_enc?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_tokens_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storyboards: {
         Row: {
