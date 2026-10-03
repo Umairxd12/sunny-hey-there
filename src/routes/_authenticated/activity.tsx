@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ListChecks, RefreshCw } from "lucide-react";
 import { listJobs } from "@/lib/dashboard.functions";
 import { EmptyState, PageHeader } from "@/components/studio/ui";
@@ -62,8 +62,8 @@ function ActivityPage() {
                   <TableHead>Took</TableHead><TableHead>Retries</TableHead><TableHead>Error</TableHead><TableHead />
                 </TableRow></TableHeader>
                 <TableBody>
-                  {q.data.jobs.map((j) => (<>
-                    <TableRow key={j.id}>
+                  {q.data.jobs.map((j) => (<Fragment key={j.id}>
+                    <TableRow>
                       <TableCell className="max-w-64"><p className="truncate font-medium">{j.label}</p><p className="font-mono text-[11px] text-muted-foreground">{j.id.slice(0, 8)} · {j.kind}{j.provider ? ` · ${j.provider}` : ""}</p></TableCell>
                       <TableCell><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", JOB_STYLE[j.status])}>{JOB_LABEL[j.status] ?? j.status}</span></TableCell>
                       <TableCell className="whitespace-nowrap text-xs">{dt(j.started_at)}</TableCell>
@@ -74,7 +74,7 @@ function ActivityPage() {
                       <TableCell><Button size="sm" variant="ghost" onClick={() => setOpen(open === j.id ? null : j.id)}>{open === j.id ? "Hide" : "Details"}</Button></TableCell>
                     </TableRow>
                     {open === j.id && (
-                      <TableRow key={j.id + "-d"}>
+                      <TableRow>
                         <TableCell colSpan={8} className="bg-muted/40">
                           <div className="grid gap-3 text-xs md:grid-cols-2">
                             <div><p className="mb-1 font-semibold">Result</p><pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded-lg bg-card p-3">{j.result ? JSON.stringify(j.result, null, 2) : "—"}</pre></div>
@@ -84,7 +84,7 @@ function ActivityPage() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>))}
+                  </Fragment>))}
                 </TableBody>
               </Table>
             )}
