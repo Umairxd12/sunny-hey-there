@@ -43,6 +43,13 @@
       "when": 1791035619999,
       "tag": "0005_automation_scheduling",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791035874957,
+      "tag": "0006_publish_cron_on_demand",
+      "breakpoints": true
     }
   ]
 }

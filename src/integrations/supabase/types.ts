@@ -1011,6 +1011,7 @@ export type Database = {
         Args: { _id: string; _seconds: number }
         Returns: boolean
       }
+      ensure_publish_cron: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1019,6 +1020,7 @@ export type Database = {
         Returns: boolean
       }
       release_job_lock: { Args: { _name: string }; Returns: undefined }
+      stop_publish_cron_if_idle: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
