@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { pageHead } from "@/lib/seo";
-import { PLATFORMS, PLATFORM_INFO, type SocialPlatform } from "@/lib/social/types";
+import { CONNECT_TO_ENABLE, NOT_AVAILABLE, PLATFORMS, PLATFORM_INFO, type SocialPlatform } from "@/lib/social/types";
 import { disconnectSocialAccount, getSocialSetup, listSocialAccounts, setProjectAccounts, startSocialConnect, syncSocialAccount } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_authenticated/social")({
@@ -69,7 +69,7 @@ function SocialPage() {
                 {info.capabilities.map((c) => (
                   <li key={c.label} className="flex items-start gap-2">
                     {c.available ? <Check className="mt-0.5 h-4 w-4 text-primary" /> : <X className="mt-0.5 h-4 w-4 text-muted-foreground" />}
-                    <span className={c.available ? "" : "text-muted-foreground"}>{c.label}{!c.available && " — Not available through the current official API."}</span>
+                    <span className={c.available ? "" : "text-muted-foreground"}>{c.label}{!c.available && ` — ${NOT_AVAILABLE}`}</span>
                   </li>
                 ))}
               </ul>
