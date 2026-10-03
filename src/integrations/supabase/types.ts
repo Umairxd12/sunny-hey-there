@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_metrics: {
+        Row: {
+          account_id: string
+          captured_at: string
+          followers: number | null
+          id: string
+          platform: string
+          raw: Json
+          total_likes: number | null
+          total_views: number | null
+          user_id: string
+          video_count: number | null
+        }
+        Insert: {
+          account_id: string
+          captured_at?: string
+          followers?: number | null
+          id?: string
+          platform: string
+          raw?: Json
+          total_likes?: number | null
+          total_views?: number | null
+          user_id: string
+          video_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          captured_at?: string
+          followers?: number | null
+          id?: string
+          platform?: string
+          raw?: Json
+          total_likes?: number | null
+          total_views?: number | null
+          user_id?: string
+          video_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_metrics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_snapshots: {
+        Row: {
+          by_platform: Json
+          captured_at: string
+          comments: number
+          followers: number
+          id: string
+          likes: number
+          shares: number
+          user_id: string
+          views: number
+        }
+        Insert: {
+          by_platform?: Json
+          captured_at?: string
+          comments?: number
+          followers?: number
+          id?: string
+          likes?: number
+          shares?: number
+          user_id: string
+          views?: number
+        }
+        Update: {
+          by_platform?: Json
+          captured_at?: string
+          comments?: number
+          followers?: number
+          id?: string
+          likes?: number
+          shares?: number
+          user_id?: string
+          views?: number
+        }
+        Relationships: []
+      }
       automation_settings: {
         Row: {
           account_ids: string[]
@@ -93,6 +176,69 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      earnings_records: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metric: string
+          period_end: string
+          period_start: string
+          platform: string
+          post_id: string | null
+          source: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metric?: string
+          period_end: string
+          period_start: string
+          platform: string
+          post_id?: string | null
+          source?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metric?: string
+          period_end?: string
+          period_start?: string
+          platform?: string
+          post_id?: string | null
+          source?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "earnings_records_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "earnings_records_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -738,6 +884,50 @@ export type Database = {
           },
         ]
       }
+      sync_logs: {
+        Row: {
+          account_id: string | null
+          finished_at: string | null
+          id: string
+          message: string | null
+          platform: string
+          started_at: string
+          status: string
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          platform: string
+          started_at?: string
+          status: string
+          trigger?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          platform?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -905,6 +1095,69 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_metrics: {
+        Row: {
+          account_id: string | null
+          avg_view_seconds: number | null
+          captured_at: string
+          comments: number | null
+          id: string
+          likes: number | null
+          platform: string
+          post_id: string
+          raw: Json
+          shares: number | null
+          user_id: string
+          views: number | null
+          watch_time_minutes: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          avg_view_seconds?: number | null
+          captured_at?: string
+          comments?: number | null
+          id?: string
+          likes?: number | null
+          platform: string
+          post_id: string
+          raw?: Json
+          shares?: number | null
+          user_id: string
+          views?: number | null
+          watch_time_minutes?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          avg_view_seconds?: number | null
+          captured_at?: string
+          comments?: number | null
+          id?: string
+          likes?: number | null
+          platform?: string
+          post_id?: string
+          raw?: Json
+          shares?: number | null
+          user_id?: string
+          views?: number | null
+          watch_time_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_metrics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_metrics_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_posts"
             referencedColumns: ["id"]
           },
         ]
