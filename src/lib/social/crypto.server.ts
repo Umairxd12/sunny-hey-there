@@ -3,7 +3,7 @@ const enc = new TextEncoder();
 let keyPromise: Promise<CryptoKey> | undefined;
 
 function getKey() {
-  const raw = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY;
+  const raw = process.env['SOCIAL_TOKEN_ENCRYPTION_KEY'];
   if (!raw) throw new Error("SOCIAL_TOKEN_ENCRYPTION_KEY is not configured");
   keyPromise ??= crypto.subtle.digest("SHA-256", enc.encode(raw)).then((h) =>
     crypto.subtle.importKey("raw", h, "AES-GCM", false, ["encrypt", "decrypt"]));

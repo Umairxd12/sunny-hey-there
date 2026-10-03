@@ -27,6 +27,7 @@ import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedWorkspaceProjectIdRouteImport } from './routes/_authenticated/workspace.$projectId'
+import { Route as ApiPublicOauthPlatformCallbackRouteImport } from './routes/api/public/oauth.$platform.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -121,6 +122,12 @@ const AuthenticatedWorkspaceProjectIdRoute =
     path: '/workspace/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicOauthPlatformCallbackRoute =
+  ApiPublicOauthPlatformCallbackRouteImport.update({
+    id: '/api/public/oauth/$platform/callback',
+    path: '/api/public/oauth/$platform/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -180,6 +189,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/_authenticated/workspace/$projectId': typeof AuthenticatedWorkspaceProjectIdRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/workspace/$projectId'
     | '/projects/'
+    | '/api/public/oauth/$platform/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/workspace/$projectId'
     | '/projects'
+    | '/api/public/oauth/$platform/callback'
   id:
     | '__root__'
     | '/'
@@ -240,12 +252,14 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId'
     | '/_authenticated/workspace/$projectId'
     | '/_authenticated/projects/'
+    | '/api/public/oauth/$platform/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicOauthPlatformCallbackRoute: typeof ApiPublicOauthPlatformCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -376,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkspaceProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/oauth/$platform/callback': {
+      id: '/api/public/oauth/$platform/callback'
+      path: '/api/public/oauth/$platform/callback'
+      fullPath: '/api/public/oauth/$platform/callback'
+      preLoaderRoute: typeof ApiPublicOauthPlatformCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -422,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicOauthPlatformCallbackRoute: ApiPublicOauthPlatformCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
