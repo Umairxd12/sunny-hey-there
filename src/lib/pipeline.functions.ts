@@ -41,6 +41,41 @@ export const getEngineStatus = createServerFn({ method: "GET" })
   });
 
 /**
+ * Hands the ENTIRE production to the studio agent (TechGenie's API): script,
+ * storyboard, characters, video — everything. The agent runs the active skill
+ * end-to-end and reports every stage back through /api/public/hooks/video-jobs.
+ * The website becomes the review + approve/reject + auto-publish front-end.
+ */
+export const delegateFullPipeline = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id, title, status").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    if (project.status === "COMPLETED") return { ok: false as const, error: "This video is already finished." };
+
+    const { data: existing } = await db.from("pipeline_steps").select("status").eq("project_id", data.projectId).eq("step_key", "full_pipeline").maybeSingle();
+    if (existing && ["queued", "running"].includes(existing.status)) {
+      return { ok: false as const, error: "TechGenie is already making this video." };
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await db.from("pipeline_steps").upsert(
+      { project_id: data.projectId, user_id: context.userId, step_key: "full_pipeline", status: "queued",
+        error: "Queued for TechGenie. Script, storyboard, characters and video are being made now — you can close this page.",
+        started_at: now, finished_at: null },
+      { onConflict: "project_id,step_key" },
+    );
+    if (error) return { ok: false as const, error: error.message };
+    await db.from("projects").update({ status: "GENERATING", current_stage: "generate_video", last_error: null, updated_at: now }).eq("id", data.projectId);
+    await db.from("production_history").insert({ project_id: data.projectId, action: "Full production delegated to TechGenie", detail: "Script, storyboard, characters and video — all made by the studio agent." });
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "production", level: "info", projectId: data.projectId, event: "Video production started", detail: `${project.title} — TechGenie is making it.` });
+    return { ok: true as const };
+  });
+
+/**
  * Hands the generate_video stage to the external video worker (the studio's own
  * render pipeline) when no video generation provider is connected. The worker
  * picks the job up from /api/public/hooks/video-jobs and reports back there.

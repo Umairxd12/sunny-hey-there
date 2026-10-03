@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LOCKED_STAGES, STAGES, nextRunnableIndex } from "@/lib/pipeline";
-import { delegateVideoToWorker, getEngineStatus, runPipelineStep } from "@/lib/pipeline.functions";
+import { delegateFullPipeline, delegateVideoToWorker, runPipelineStep } from "@/lib/pipeline.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -26,7 +26,7 @@ function ProjectPage() {
   const qc = useQueryClient();
   const run = useServerFn(runPipelineStep);
   const delegate = useServerFn(delegateVideoToWorker);
-  const engineStatus = useServerFn(getEngineStatus);
+  const delegateFull = useServerFn(delegateFullPipeline);
   const [running, setRunning] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
   const autoStarted = useRef(false);
@@ -62,38 +62,34 @@ function ProjectPage() {
     }
   }
 
-  /** One click: runs every remaining stage in order. Text stages run here; the
-   *  video stage goes to the connected video provider, or to the video worker
-   *  queue when no provider is connected. */
-  async function runAll() {
-    if (runningAll || running) return;
-    setRunningAll(true);
+  /** Manual path: delegate only the video stage to the studio worker. */
+  async function delegateVideo() {
+    setRunning("generate_video");
     try {
-      let engine: { providers: { capability: string; configured: boolean }[] } | null = null;
-      for (const stage of STAGES) {
-        const { data: fresh } = await supabase.from("pipeline_steps").select("step_key, status").eq("project_id", projectId);
-        if (fresh?.some((s) => s.step_key === stage.key && s.status === "done")) continue;
-        setRunning(stage.key);
-        if (stage.key === "generate_video") {
-          if (!engine) engine = await engineStatus();
-          const videoReady = engine?.providers.some((p) => p.capability === "video_generation" && p.configured);
-          if (videoReady) {
-            const res = await run({ data: { projectId, stepKey: stage.key } });
-            if (!res.ok) { toast.error(res.error); break; }
-            continue;
-          }
-          const d = await delegate({ data: { projectId } });
-          if (!d.ok) { toast.error(d.error); break; }
-          toast.success("Video queued — the worker is generating it now. You can close this page; the video will appear in Videos when ready.");
-          break;
-        }
-        const res = await run({ data: { projectId, stepKey: stage.key } });
-        if (!res.ok) { toast.error(`Stopped at "${stage.label}": ${res.error}`); break; }
-      }
+      const res = await delegate({ data: { projectId } });
+      if (!res.ok) toast.error(res.error);
+      else toast.success("Video queued — the worker is generating it now.");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setRunning(null);
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+    }
+  }
+
+  /** One click: hands the whole production to TechGenie — script, storyboard,
+   *  characters and video are all made by the studio agent through its API.
+   *  The website becomes the review + approve/reject + auto-publish front-end. */
+  async function runAll() {
+    if (runningAll || running) return;
+    setRunningAll(true);
+    try {
+      const res = await delegateFull({ data: { projectId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success("TechGenie is making your video — script, storyboard, characters, everything. It will appear in Videos when ready.");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
       setRunningAll(false);
       qc.invalidateQueries({ queryKey: ["project", projectId] });
     }
@@ -115,15 +111,26 @@ function ProjectPage() {
           <span className="flex items-center gap-2 font-medium">Current status <StatusBadge status={project.status} /></span>
           <span className="text-muted-foreground">{doneCount} of {STAGES.length} stages done</span>
         </div>
-        {doneCount < STAGES.length && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-secondary/60 p-4">
-            <Button size="lg" disabled={runningAll || !!running} onClick={runAll}>
-              {runningAll || running ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-              {runningAll || running ? `Working… ${STAGES.find((s) => s.key === running)?.label ?? ""}` : "Generate video — 1 click"}
-            </Button>
-            <p className="max-w-md text-xs text-muted-foreground">Runs every remaining stage automatically, exactly as your active skill defines. The video itself is generated by your connected video provider — or queued for the studio video worker when none is connected.</p>
-          </div>
-        )}
+        {(() => {
+          const full = stepOf("full_pipeline")?.status;
+          if (full === "queued" || full === "running") {
+            return (
+              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-primary/10 p-4 ring-1 ring-primary/30">
+                <Loader2 className="size-5 animate-spin text-primary" />
+                <p className="text-sm"><span className="font-semibold">TechGenie is making your video</span> — script, storyboard, characters and video, all through the studio API. You can close this page; the finished video will appear in Videos for your review.</p>
+              </div>
+            );
+          }
+          return doneCount < STAGES.length ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-secondary/60 p-4">
+              <Button size="lg" disabled={runningAll || !!running} onClick={runAll}>
+                {runningAll ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+                {runningAll ? "Starting…" : "Generate video — 1 click"}
+              </Button>
+              <p className="max-w-md text-xs text-muted-foreground">One click hands the whole production to TechGenie: script, storyboard, locked characters and the video itself, all made through the studio API exactly as your active skill defines. You review the finished video, then approve or reject it.</p>
+            </div>
+          ) : null;
+        })()}
         <Progress className="mt-3" value={(doneCount / STAGES.length) * 100} />
         <p className="mt-3 text-sm">
           {doneCount === STAGES.length ? "Your video is finished." : <>Your video is now at <span className="font-semibold">Step {nextIdx + 1} · {STAGES[nextIdx]?.label}</span></>}
@@ -169,7 +176,14 @@ function ProjectPage() {
                     {st?.error && <p className="mt-1 text-sm text-destructive">{st.error}</p>}
                   </div>
                   {st?.status === "blocked" ? (
-                    <Button size="sm" variant="outline" asChild><Link to="/providers">Connect provider</Link></Button>
+                    <span className="flex gap-2">
+                      <Button size="sm" variant="outline" asChild><Link to="/providers">Connect provider</Link></Button>
+                      {def.key === "generate_video" && (
+                        <Button size="sm" variant="outline" disabled={!!running} onClick={delegateVideo}>
+                          {running === "generate_video" ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}Use studio worker
+                        </Button>
+                      )}
+                    </span>
                   ) : st?.status === "queued" ? (
                     <Button size="sm" variant="outline" disabled><Loader2 className="size-4 animate-spin" />Queued — worker is generating</Button>
                   ) : (

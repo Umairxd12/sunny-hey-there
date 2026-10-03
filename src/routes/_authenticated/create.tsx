@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { suggestVideoIdeas } from "@/lib/pipeline.functions";
+import { LOCKED_CHARACTERS } from "@/lib/character-lock";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/create")({
@@ -72,7 +73,14 @@ function CreateVideo() {
 
   return (
     <>
-      <PageHeader title="Create video" description="Step 1 — describe your idea. The studio then walks it through every production step." />
+      <PageHeader title="Create video" description="Step 1 — describe your idea. One click hands everything else to TechGenie." />
+      <div className="mb-5 flex max-w-2xl items-center gap-4 rounded-2xl border bg-card p-4">
+        <img src={LOCKED_CHARACTERS.images.duo} alt="Locked characters: otter and raccoon" className="h-20 w-14 shrink-0 rounded-xl object-cover" />
+        <div className="text-sm">
+          <p className="font-semibold">Locked characters: otter & raccoon</p>
+          <p className="mt-0.5 text-muted-foreground">Your approved cast — goggles, tool belt, scale — is locked for every video. Script, storyboard, characters and the video itself are all made by TechGenie through the studio API.</p>
+        </div>
+      </div>
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
         <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
@@ -117,7 +125,7 @@ function CreateVideo() {
           <Button disabled={busy}>{busy ? "Creating…" : "Create & generate video — 1 click"}</Button>
           <Button type="button" variant="outline" disabled={busy} onClick={(e) => submit(e as unknown as React.FormEvent, false)}>Create project only</Button>
         </div>
-        <p className="text-xs text-muted-foreground">“Create & generate” runs the whole skill-driven pipeline automatically — meta prompt, QA, characters, world, storyboard, video prompt, video generation, review, edits, final QA and metadata — then shows you the finished video to approve.</p>
+        <p className="text-xs text-muted-foreground">“Create & generate” hands the whole production to TechGenie — script, storyboard, locked characters and video, all made through the studio API exactly as your active skill defines — then shows you the finished video to approve or reject.</p>
       </form>
     </>
   );
