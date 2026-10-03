@@ -40,6 +40,12 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   active: { label: "Active", cls: "bg-success/15 text-success" },
   inactive: { label: "Inactive", cls: "bg-muted text-muted-foreground" },
   disabled: { label: "Disabled", cls: "bg-muted text-muted-foreground" },
+  READY: { label: "Ready", cls: "bg-accent text-accent-foreground" },
+  SCHEDULED: { label: "Scheduled", cls: "bg-primary/15 text-primary" },
+  PROCESSING: { label: "Processing", cls: "bg-primary/15 text-primary" },
+  PUBLISHING: { label: "Publishing", cls: "bg-primary/25 text-primary" },
+  PUBLISHED: { label: "Published", cls: "bg-success/15 text-success" },
+  RETRYING: { label: "Retrying", cls: "bg-warning/20 text-foreground" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
