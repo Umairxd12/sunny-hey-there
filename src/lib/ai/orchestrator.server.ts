@@ -60,9 +60,14 @@ export function buildProductionContext(args: {
 }) {
   const { skill, project, outputs, stageKey } = args;
   const section = (title: string, body?: string | null) => `## ${title}\n${body?.trim() ? body.trim() : "(not available yet)"}`;
+  const is2D = /2d/i.test(project.visual_style ?? "");
+  const styleOverride = is2D
+    ? `=== STYLE OVERRIDE: 2D CARTOON (user selected 2D Studio) ===\nThis video is rendered as a flat 2D cartoon — NOT 3D. Wherever the skill or earlier outputs say "3D", "3D render", "stylized 3D", "Pixar-like" or "clay", substitute: flat 2D cartoon animation with bold clean outlines, flat colors, simple cel shading, playful squash-and-stretch — no 3D depth, no volumetric render look, no soft-3D fur shading. Characters, world, story, comedy, camera and continuity rules stay EXACTLY the same — only the render style changes to 2D.`
+    : "";
   const system = [
     SYSTEM_INSTRUCTIONS,
     `=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`,
+    ...(styleOverride ? [styleOverride] : []),
   ].join("\n\n");
   const settings = [
     `Title: ${project.title}`,

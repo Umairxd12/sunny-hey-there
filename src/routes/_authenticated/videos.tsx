@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: Page,
 });
 
-type Row = { projectId: string; title: string; url: string | null; status: string; createdAt: string; source: "studio" | "chat"; platform: string };
+type Row = { projectId: string; title: string; url: string | null; status: string; createdAt: string; source: "studio" | "chat"; platform: string; style: string };
 
 const PLATFORM_ORDER = ["TikTok", "Facebook Reels", "Facebook feed", "YouTube Shorts", "YouTube (wide)"];
 const sectionOf = (platform: string) => PLATFORM_ORDER.includes(platform) ? platform : "Other";
@@ -29,20 +29,20 @@ function Page() {
       const [vids, assets, projects] = await Promise.all([
         supabase.from("videos").select("project_id, status, video_url, provider, created_at").order("created_at", { ascending: false }).limit(100),
         supabase.from("video_assets").select("project_id, url, metadata, created_at").eq("kind", "final").order("created_at", { ascending: false }).limit(100),
-        supabase.from("projects").select("id, title, target_platform"),
+        supabase.from("projects").select("id, title, target_platform, visual_style"),
       ]);
-      const info = new Map((projects.data ?? []).map((p) => [p.id, { title: p.title, platform: (p.target_platform as string | null) ?? "Other" }]));
+      const info = new Map((projects.data ?? []).map((p) => [p.id, { title: p.title, platform: (p.target_platform as string | null) ?? "Other", style: (p.visual_style as string | null) ?? "" }]));
       const rows = new Map<string, Row>();
       for (const v of vids.data ?? []) {
         if (!v.project_id || rows.has(v.project_id)) continue;
-        const inf = info.get(v.project_id) ?? { title: "Untitled", platform: "Other" };
-        rows.set(v.project_id, { projectId: v.project_id, title: inf.title, url: v.video_url, status: v.status ?? "unknown", createdAt: v.created_at, source: v.provider === "chat-assistant" ? "chat" : "studio", platform: inf.platform });
+        const inf = info.get(v.project_id) ?? { title: "Untitled", platform: "Other", style: "" };
+        rows.set(v.project_id, { projectId: v.project_id, title: inf.title, url: v.video_url, status: v.status ?? "unknown", createdAt: v.created_at, source: v.provider === "chat-assistant" ? "chat" : "studio", platform: inf.platform, style: inf.style });
       }
       for (const a of assets.data ?? []) {
         if (!a.project_id || rows.has(a.project_id)) continue;
         const meta = (a as any).metadata as { source?: string } | null;
-        const inf = info.get(a.project_id) ?? { title: "Untitled", platform: "Other" };
-        rows.set(a.project_id, { projectId: a.project_id, title: inf.title, url: a.url, status: "done", createdAt: a.created_at, source: meta?.source === "chat" ? "chat" : "studio", platform: inf.platform });
+        const inf = info.get(a.project_id) ?? { title: "Untitled", platform: "Other", style: "" };
+        rows.set(a.project_id, { projectId: a.project_id, title: inf.title, url: a.url, status: "done", createdAt: a.created_at, source: meta?.source === "chat" ? "chat" : "studio", platform: inf.platform, style: inf.style });
       }
       return [...rows.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
     },
@@ -84,6 +84,7 @@ function Page() {
                       <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <StatusBadge status={r.status} />
                         <span className="rounded-full bg-secondary px-2 py-0.5">{r.source === "chat" ? "Made in chat" : "Studio"}</span>
+                        {/2d/i.test(r.style) && <span className="rounded-full bg-primary/15 px-2 py-0.5 font-medium text-primary">2D</span>}
                         {new Date(r.createdAt).toLocaleString()}
                       </p>
                     </div>

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,16 +15,23 @@ import { LOCKED_CHARACTERS } from "@/lib/character-lock";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/create")({
-  head: () => pageHead("Create Video", "Start a new 3D cartoon video from an idea."),
+  head: () => pageHead("Create Video", "Start a new cartoon video from an idea — 3D or 2D."),
   errorComponent: RouteErrorFallback,
+  validateSearch: (search: Record<string, unknown>): { mode?: "2d" } =>
+    search["mode"] === "2d" ? { mode: "2d" } : {},
   component: CreateVideo,
 });
+
+/** Art direction applied when the user creates from the 2D Studio section. */
+export const TWOD_STYLE = "2D cartoon style: flat colors, bold clean outlines, simple cel shading, playful 2D cartoon look (not 3D render)";
 
 const PLATFORMS: Record<string, string> = { tiktok: "9:16", youtube_shorts: "9:16", facebook_reels: "9:16", youtube: "16:9", facebook: "1:1" };
 const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", youtube_shorts: "YouTube Shorts", facebook_reels: "Facebook Reels", youtube: "YouTube (wide)", facebook: "Facebook feed" };
 
 function CreateVideo() {
   const navigate = useNavigate();
+  const { mode } = Route.useSearch();
+  const is2D = mode === "2d";
   const suggest = useServerFn(suggestVideoIdeas);
   const genBrief = useServerFn(generateVideoBrief);
   const [title, setTitle] = useState("");
@@ -36,7 +43,9 @@ function CreateVideo() {
   const [language, setLanguage] = useState("English");
   const [audience, setAudience] = useState("");
   const [refs, setRefs] = useState("");
-  const [style, setStyle] = useState("");
+  const [style, setStyle] = useState(is2D ? TWOD_STYLE : "");
+  // Switching between 3D and 2D modes presets the style field (same route, no remount).
+  useEffect(() => { setStyle(is2D ? TWOD_STYLE : ""); }, [is2D]);
   const [reqs, setReqs] = useState("");
   const [busy, setBusy] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
@@ -124,12 +133,12 @@ function CreateVideo() {
 
   return (
     <>
-      <PageHeader title="Create video" description="Step 1 — describe your idea. One click hands everything else to TechGenie." />
+      <PageHeader title={is2D ? "Create 2D video" : "Create video"} description={is2D ? "2D Studio — same cast and comedy, drawn as a flat 2D cartoon. One click hands everything else to TechGenie." : "Step 1 — describe your idea. One click hands everything else to TechGenie."} />
       <div className="mb-5 flex max-w-2xl items-center gap-4 rounded-2xl border bg-card p-4">
         <img src={LOCKED_CHARACTERS.images.duo} alt="Locked characters: otter and raccoon" className="h-20 w-14 shrink-0 rounded-xl object-cover" />
         <div className="text-sm">
-          <p className="font-semibold">Locked characters: otter & raccoon</p>
-          <p className="mt-0.5 text-muted-foreground">Your approved cast — goggles, tool belt, scale — is locked for every video. Script, storyboard, characters and the video itself are all made by TechGenie through the studio API.</p>
+          <p className="font-semibold">Locked characters: otter & raccoon{is2D ? " — in 2D style" : ""}</p>
+          <p className="mt-0.5 text-muted-foreground">{is2D ? "Your approved cast drawn as a flat 2D cartoon — goggles, tool belt, scale, all locked. Script, storyboard and the video itself are all made by TechGenie through the studio API." : "Your approved cast — goggles, tool belt, scale — is locked for every video. Script, storyboard, characters and the video itself are all made by TechGenie through the studio API."}</p>
         </div>
       </div>
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">

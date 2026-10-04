@@ -1,15 +1,16 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { BarChart3, BookOpenText, CalendarDays, Clapperboard, Cpu, FolderKanban, Film, LayoutDashboard, LogOut, Menu, Settings, Share2, Sparkles, Timer } from "lucide-react";
+import { BarChart3, BookOpenText, Brush, CalendarDays, Clapperboard, Cpu, FolderKanban, Film, LayoutDashboard, LogOut, Menu, Settings, Share2, Sparkles, Timer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const NAV: { to: string; label: string; icon: typeof LayoutDashboard; search?: Record<string, string> }[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/create", label: "Create Video", icon: Sparkles },
+  { to: "/create", label: "2D Studio", icon: Brush, search: { mode: "2d" } },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/videos", label: "Videos", icon: Film },
   { to: "/social", label: "Social Accounts", icon: Share2 },
@@ -19,16 +20,20 @@ const NAV = [
   { to: "/skills", label: "Skill Manager", icon: BookOpenText },
   { to: "/providers", label: "AI Providers", icon: Cpu },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
+  const is2D = search["mode"] === "2d";
   return (
     <nav className="flex flex-col gap-0.5">
-      {NAV.map(({ to, label, icon: Icon }) => {
-        const active = path === to || path.startsWith(to + "/");
+      {NAV.map(({ to, label, icon: Icon, search: itemSearch }) => {
+        const wants2D = itemSearch?.["mode"] === "2d";
+        const active = wants2D ? (path === to || path.startsWith(to + "/")) && is2D
+          : (path === to || path.startsWith(to + "/")) && !is2D;
         return (
-          <Link key={to} to={to} onClick={onNavigate}
+          <Link key={label} to={to} {...(itemSearch ? { search: itemSearch } : {})} onClick={onNavigate}
             className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
               active ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground")}>
             <Icon className={cn("size-4", active && "text-primary")} />
