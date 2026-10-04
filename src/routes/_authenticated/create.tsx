@@ -149,10 +149,12 @@ function CreateVideo() {
           {busy ? "TechGenie kaam shuru kar raha hai…" : "Poora video banwao — 1 click (idea bhi TechGenie banayega)"}
         </Button>
         <p className="-mt-3 text-xs text-muted-foreground">Ek click: project banta hai aur TechGenie sab kuch khud karta hai — idea, script, storyboard, locked characters, video — phir finished video approve/reject ke liye. Is me website AI credits bilkul nahi lagte.</p>
+        {!is2D && (
         <Button type="button" variant="secondary" className="w-full" onClick={aiBrief} disabled={briefBusy}>
           {briefBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           {briefBusy ? "AI soch raha hai…" : "Sirf AI se topic, title aur description banwao"}
         </Button>
+        )}
         <div className="space-y-1.5"><Label htmlFor="t">Title</Label><Input id="t" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The brave little robot" /></div>
         <div className="space-y-1.5"><Label htmlFor="topic">Topic</Label><Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Sharing, friendship, rainy day…" /></div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -173,9 +175,11 @@ function CreateVideo() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="i">Video idea</Label>
+            {!is2D && (
             <Button type="button" size="sm" variant="outline" onClick={getIdeas} disabled={ideasBusy}>
               {ideasBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Suggest ideas
             </Button>
+            )}
           </div>
           <Textarea id="i" rows={5} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="A tiny robot learns to share its umbrella during a rainy day in a candy-colored city…" />
           {ideas.length > 0 && (
