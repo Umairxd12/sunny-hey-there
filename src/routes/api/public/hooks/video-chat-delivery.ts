@@ -8,7 +8,9 @@ import { timingSafeEqual } from "crypto";
  * other finished video.
  *
  * Multipart form fields: title (required), topic (optional), description
- * (optional), file (required, the finished MP4, <= 100 MB).
+ * (optional), file (required, the finished MP4, <= 100 MB), auto_publish
+ * (optional, "1" = worker QA-passed it and the owner authorized daily
+ * auto-uploads → queued for the next US peak publishing slot).
  * Auth: header `x-worker-secret` must match `worker_secret` in internal_config
  * (falls back to `cron_secret`).
  *
@@ -37,6 +39,9 @@ export const Route = createFileRoute("/api/public/hooks/video-chat-delivery")({
         const topic = form?.get("topic");
         const description = form?.get("description");
         const file = form?.get("file");
+        // "1" = the worker QA-passed this video and the owner authorized daily
+        // auto-uploads: queue it for publishing at the next US peak slot.
+        const autoPublish = form?.get("auto_publish") === "1";
         if (typeof title !== "string" || !title.trim() || !(file instanceof File)) {
           return Response.json({ ok: false, error: "Expected multipart fields: title, file (MP4)." }, { status: 400 });
         }
@@ -67,6 +72,7 @@ export const Route = createFileRoute("/api/public/hooks/video-chat-delivery")({
           language: "English",
           status: "COMPLETED",
           current_stage: "metadata",
+          auto_publish: autoPublish,
           reference_notes: "Made in chat — delivered by the studio assistant.",
         }).select("id").single();
         if (projErr || !project) return Response.json({ ok: false, error: `Could not create project: ${projErr?.message}` }, { status: 500 });
@@ -93,7 +99,20 @@ export const Route = createFileRoute("/api/public/hooks/video-chat-delivery")({
         const { logActivity } = await import("@/lib/jobs/jobs.server");
         await logActivity({ userId: ownerId, category: "production", level: "success", projectId: project.id, event: "Video finished — ready for review", detail: title.trim().slice(0, 200) });
 
-        return Response.json({ ok: true, projectId: project.id, videoId: videoRow?.id ?? null, url });
+        // Owner-authorized daily auto-uploads: queue for the next US peak slot.
+        // With no connected accounts yet this lands as READY ("no publishing
+        // account selected yet") and publishes automatically once accounts connect.
+        let queued: string | null = null;
+        if (autoPublish) {
+          try {
+            const { queueCompletedProject } = await import("@/lib/automation/automation.server");
+            queued = await queueCompletedProject(db, ownerId, project.id);
+          } catch (e) {
+            queued = `queue failed: ${e instanceof Error ? e.message : e}`;
+          }
+        }
+
+        return Response.json({ ok: true, projectId: project.id, videoId: videoRow?.id ?? null, url, queued });
       },
     },
   },
