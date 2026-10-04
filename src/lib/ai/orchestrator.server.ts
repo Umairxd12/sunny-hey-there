@@ -46,6 +46,22 @@ export async function loadActiveSkill(): Promise<{ id: string; name: string | nu
   return data ?? null;
 }
 
+/**
+ * Which skill drives a project. 2D Studio projects (visual_style mentions 2D)
+ * use the owner's bundled 2D Minimalist Scholar master prompt; everything else
+ * uses the active Skill Manager skill (the 3D cartoon pipeline).
+ */
+export async function loadSkillForProject(project: { visual_style?: string | null }) {
+  if (/2d/i.test(project.visual_style ?? "")) return loadScholarSkill();
+  return loadActiveSkill();
+}
+
+/** The owner's bundled 2D Minimalist Scholar master prompt (2D Studio). */
+export async function loadScholarSkill() {
+  const { SCHOLAR_SKILL } = await import("../scholar-skill");
+  return { id: "bundled-scholar", name: SCHOLAR_SKILL.name, version: SCHOLAR_SKILL.version, content: SCHOLAR_SKILL.content };
+}
+
 /** The approved meta prompt without the QA log. */
 const approvedMeta = (outputs: Record<string, string>) => (outputs["analysis"] ?? outputs["meta_prompt"])?.split(QA_LOG_MARKER)[0];
 
@@ -158,7 +174,7 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
   const missing = STAGES.slice(0, idx).find((s) => !doneMap.has(s.key));
   if (missing) return { ok: false, error: `"${missing.label}" must finish before "${stage.label}".` };
 
-  const skill = await loadActiveSkill();
+  const skill = await loadSkillForProject(project);
   if (!skill) return { ok: false, error: "No active skill. Upload and activate a SKILL.md in Skill Manager first." };
 
   const isRedo = doneMap.has(stageKey);
@@ -247,16 +263,19 @@ async function recentConcepts(userId: string | undefined): Promise<string> {
   }
 }
 /** Suggests video ideas from the active skill when the user has none. */
-export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }, userId?: string) {
-  const skill = await loadActiveSkill();
+export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }, userId?: string, scholar = false) {
+  const skill = scholar ? await loadScholarSkill() : await loadActiveSkill();
   if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
   if (!provider) throw new ProviderNotConfiguredError("text");
   const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
   const memory = await recentConcepts(userId);
-  const prompt = `Suggest 5 short 3D cartoon video ideas that follow the active skill.
+  const scholarRule = scholar
+    ? `Rotate across the scholar's topic families (prehistoric survival, evolution/psychology, archaeology/inventions, apex predators, wildcards) — pick a DIFFERENT family from the already-made videos below. Each idea is a narrated educational story for flat 2D minimalist animation.`
+    : `Each idea must be ONE single invention with ONE continuous scene (never a compilation of gags).`;
+  const prompt = `Suggest 5 short video ideas that follow the active skill.
 Topic: ${input.topic || "any"} | Platform: ${input.platform || "any"} | Audience: ${input.audience || "general"} | Duration: ${input.duration}s | Language: ${input.language}
-Each idea must be ONE single invention with ONE continuous scene (never a compilation of gags).${memory}
+${scholarRule}${memory}
 Output exactly 5 lines, no numbering, no extra text, each formatted as: Title :: one or two sentence idea with setup, complication and payoff.`;
   const { text } = await provider.generate({ system, prompt });
   return text.split("\n").map((l) => l.replace(/^[\s\-*\d.)]+/, "").trim()).filter((l) => l.includes("::")).slice(0, 5)
@@ -268,14 +287,21 @@ Output exactly 5 lines, no numbering, no extra text, each formatted as: Title ::
  * description from the active skill — used by the "AI se likhwao" button on
  * the Create page to fill the Title, Topic and Video idea fields at once.
  */
-export async function generateBrief(input: { duration: number; language: string }, userId?: string) {
-  const skill = await loadActiveSkill();
+export async function generateBrief(input: { duration: number; language: string }, userId?: string, scholar = false) {
+  const skill = scholar ? await loadScholarSkill() : await loadActiveSkill();
   if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
   if (!provider) throw new ProviderNotConfiguredError("text");
   const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
   const memory = await recentConcepts(userId);
-  const prompt = `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
+  const prompt = scholar
+    ? `Invent ONE fresh educational 2D minimalist animation concept from the scholar's topic families (prehistoric human survival, evolutionary biology/psychology, archaeological breakthroughs & primitive inventions, apex predator behavior/animal cognition, obscure high-curiosity wildcards). Duration: ${input.duration}s. Language: ${input.language}.
+HARD RULES:
+- Pick a topic family DIFFERENT from the already-made videos below — the owner demands a new topic every time, never the same background/subject twice.
+- The concept is a narrated story (unseen omniscient narrator) for flat 2D minimalist vector animation per the skill's visual laws.${memory}
+Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
+{"topic": "2-4 word theme, e.g. Fire Keepers", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the hook question, the core science/history, and the paradigm-shifting payoff."}`
+    : `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
 HARD RULES (the user rejects anything else):
 - ONE single invention / contraption in the whole video. ONE problem, ONE payoff. Never a compilation of several gags or "N tiny problems".
 - The concept must play as ONE continuous scene and story: setup shows the invention, the middle operates it, the end is the deadpan payoff — all in the same place, same light, no scene jumps.${memory}

@@ -56,6 +56,9 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
             durationSeconds: p.target_duration_seconds, aspectRatio: p.aspect_ratio, targetPlatform: p.target_platform,
             targetAudience: p.target_audience, language: p.language, visualStyle: p.visual_style,
             videoRequirements: p.video_requirements, referenceNotes: p.reference_notes,
+            // Tells the worker which master prompt drives this job: the 2D
+            // Minimalist Scholar for 2D Studio projects, the 3D skill otherwise.
+            skillName: /2d/i.test(p.visual_style ?? "") ? "2d-minimalist-scholar" : "studio-3d",
           }));
         }
         const fullSet = new Set(fullIds);

@@ -18,11 +18,12 @@ export const suggestVideoIdeas = createServerFn({ method: "POST" })
     audience: z.string().max(200).optional(),
     duration: z.number().int().min(3).max(180),
     language: z.string().max(40),
+    scholar: z.boolean().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { suggestIdeas } = await import("./ai/orchestrator.server");
     try {
-      return { ok: true as const, ideas: await suggestIdeas(data, context.userId) };
+      return { ok: true as const, ideas: await suggestIdeas(data, context.userId, data.scholar ?? false) };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "Could not suggest ideas." };
     }
@@ -33,11 +34,12 @@ export const generateVideoBrief = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     duration: z.number().int().min(3).max(180),
     language: z.string().max(40),
+    scholar: z.boolean().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { generateBrief } = await import("./ai/orchestrator.server");
     try {
-      return { ok: true as const, brief: await generateBrief(data, context.userId) };
+      return { ok: true as const, brief: await generateBrief(data, context.userId, data.scholar ?? false) };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "Could not generate a brief." };
     }

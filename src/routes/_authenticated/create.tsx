@@ -38,14 +38,19 @@ function CreateVideo() {
   const [topic, setTopic] = useState("");
   const [idea, setIdea] = useState("");
   const [duration, setDuration] = useState("15");
-  const [platform, setPlatform] = useState("tiktok");
-  const [ratio, setRatio] = useState("9:16");
+  const [platform, setPlatform] = useState(is2D ? "youtube" : "tiktok");
+  const [ratio, setRatio] = useState(is2D ? "16:9" : "9:16");
   const [language, setLanguage] = useState("English");
   const [audience, setAudience] = useState("");
   const [refs, setRefs] = useState("");
   const [style, setStyle] = useState(is2D ? TWOD_STYLE : "");
-  // Switching between 3D and 2D modes presets the style field (same route, no remount).
-  useEffect(() => { setStyle(is2D ? TWOD_STYLE : ""); }, [is2D]);
+  // Switching between 3D and 2D modes presets style/platform (same route, no remount).
+  // 2D Scholar videos are 16:9 YouTube pieces per the scholar's visual laws.
+  useEffect(() => {
+    setStyle(is2D ? TWOD_STYLE : "");
+    setPlatform(is2D ? "youtube" : "tiktok");
+    setRatio(is2D ? "16:9" : "9:16");
+  }, [is2D]);
   const [reqs, setReqs] = useState("");
   const [busy, setBusy] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
@@ -56,7 +61,7 @@ function CreateVideo() {
   async function aiBrief() {
     setBriefBusy(true);
     try {
-      const res = await genBrief({ data: { duration: Number(duration), language } });
+      const res = await genBrief({ data: { duration: Number(duration), language, scholar: is2D } });
       if (!res.ok) { toast.error(res.error); return; }
       setTitle(res.brief.title);
       setTopic(res.brief.topic);
@@ -72,7 +77,7 @@ function CreateVideo() {
   async function getIdeas() {
     setIdeasBusy(true);
     try {
-      const res = await suggest({ data: { topic: topic || undefined, platform: PLATFORM_LABEL[platform], audience: audience || undefined, duration: Number(duration), language } });
+      const res = await suggest({ data: { topic: topic || undefined, platform: PLATFORM_LABEL[platform], audience: audience || undefined, duration: Number(duration), language, scholar: is2D } });
       if (!res.ok) toast.error(res.error);
       else if (!res.ideas.length) toast.error("No ideas came back. Please try again.");
       else setIdeas(res.ideas);
@@ -115,7 +120,7 @@ function CreateVideo() {
   async function aiFullAuto() {
     setBusy(true);
     try {
-      const res = await genBrief({ data: { duration: Number(duration), language } });
+      const res = await genBrief({ data: { duration: Number(duration), language, scholar: is2D } });
       if (!res.ok) { toast.error(res.error); return; }
       const brief = res.brief;
       setTitle(brief.title);
