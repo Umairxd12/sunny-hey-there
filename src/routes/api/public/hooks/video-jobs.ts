@@ -135,6 +135,11 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
           // Set true on the final delivery: marks full_pipeline done, ensures
           // metadata, completes the project and queues READY posts.
           done: z.boolean().optional(),
+          // When the worker invents the idea itself (1-click with an empty
+          // brief), it reports the final title/topic so the project row shows
+          // the real title instead of the placeholder.
+          title: z.string().max(200).optional(),
+          topic: z.string().max(200).optional(),
           // Video delivery (video mode, or final part of full mode).
           clips: z.array(z.object({
             from_s: z.number(), to_s: z.number(), prompt: z.string().max(8000), video_url: z.string().url(),
@@ -163,6 +168,16 @@ export const Route = createFileRoute("/api/public/hooks/video-jobs")({
         if (!b.projectId) return Response.json({ ok: false, error: "projectId is required." }, { status: 400 });
         const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", b.projectId).single();
         if (!project) return Response.json({ ok: false, error: "Project not found." }, { status: 404 });
+
+        // Worker-invented title/topic (1-click with empty brief): replace the placeholder.
+        const titleTopic: Record<string, string> = {};
+        const inventedTitle = b["title"];
+        const inventedTopic = b["topic"];
+        if (typeof inventedTitle === "string" && inventedTitle.trim()) titleTopic["title"] = inventedTitle.trim();
+        if (typeof inventedTopic === "string" && inventedTopic.trim()) titleTopic["topic"] = inventedTopic.trim();
+        if (Object.keys(titleTopic).length) {
+          await db.from("projects").update({ ...titleTopic, updated_at: now }).eq("id", b.projectId);
+        }
 
         if (b.releaseClaim) {
           await db.from("pipeline_steps")

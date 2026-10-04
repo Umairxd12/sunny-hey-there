@@ -115,19 +115,16 @@ function CreateVideo() {
     return data.id as string;
   }
 
-  /** TRUE ONE CLICK: AI invents topic + title + idea, creates the project from it,
-   *  and the project page autostarts the full pipeline (script → storyboard → video). */
+  /** TRUE ONE CLICK: no website AI used at all (no credits). Creates the project
+   *  with an empty idea and hands EVERYTHING — idea, script, storyboard,
+   *  characters, video — to TechGenie's worker, which invents the idea per
+   *  the active skill and reports the final title back. */
   async function aiFullAuto() {
     setBusy(true);
     try {
-      const res = await genBrief({ data: { duration: Number(duration), language, scholar: is2D } });
-      if (!res.ok) { toast.error(res.error); return; }
-      const brief = res.brief;
-      setTitle(brief.title);
-      setTopic(brief.topic);
-      setIdea(brief.description);
-      const id = await createProject({ title: brief.title, topic: brief.topic, idea: brief.description });
-      toast.success("AI ne idea banaya — ab TechGenie poora video bana raha hai: script, storyboard, characters, video.");
+      const placeholderTitle = is2D ? "2D video — idea TechGenie banayega" : "Video — idea TechGenie banayega";
+      const id = await createProject({ title: placeholderTitle, topic: "", idea: "" });
+      toast.success("Ho gaya! TechGenie ab idea bhi khud banayega aur poora video: script, storyboard, characters, video.");
       navigate({ to: "/projects/$projectId", params: { projectId: id }, search: { autostart: "1" as const } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "AI video start nahi ho saka. Dobara try karein.");
@@ -149,9 +146,9 @@ function CreateVideo() {
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <Button type="button" className="w-full" onClick={aiFullAuto} disabled={busy}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-          {busy ? "AI idea bana raha hai…" : "AI idea banao aur poora video start karo — 1 click"}
+          {busy ? "TechGenie kaam shuru kar raha hai…" : "Poora video banwao — 1 click (idea bhi TechGenie banayega)"}
         </Button>
-        <p className="-mt-3 text-xs text-muted-foreground">Ek click: AI topic + title + video idea banata hai, project create hota hai, aur TechGenie poora flow chalata hai — script, storyboard, locked characters, video — phir finished video approve/reject ke liye.</p>
+        <p className="-mt-3 text-xs text-muted-foreground">Ek click: project banta hai aur TechGenie sab kuch khud karta hai — idea, script, storyboard, locked characters, video — phir finished video approve/reject ke liye. Is me website AI credits bilkul nahi lagte.</p>
         <Button type="button" variant="secondary" className="w-full" onClick={aiBrief} disabled={briefBusy}>
           {briefBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           {briefBusy ? "AI soch raha hai…" : "Sirf AI se topic, title aur description banwao"}
