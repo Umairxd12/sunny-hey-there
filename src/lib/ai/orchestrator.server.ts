@@ -246,6 +246,17 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
   }
 }
 
+/** Extracts JSON even when the model wraps it in prose or fences. */
+function parseJsonLoose(text: string): any {
+  const noFence = text.replace(/```json|```/g, "").trim();
+  try { return JSON.parse(noFence); } catch { /* fall through */ }
+  const start = noFence.indexOf("{");
+  const end = noFence.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(noFence.slice(start, end + 1)); } catch { /* fall through */ }
+  }
+  throw new Error("The AI reply was not valid JSON. Please try again.");
+}
 /** Recent topics/ideas for this user — fed into idea prompts so new videos never repeat old scenes. */
 async function recentConcepts(userId: string | undefined): Promise<string> {
   if (!userId) return "";
@@ -306,12 +317,14 @@ HARD RULES (the user rejects anything else):
 Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
 {"topic": "2-4 word theme, e.g. Coconut Chaos", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the single invention, the setup, the complication and the deadpan payoff — written as ONE continuous scene the studio will produce."}`;
   const { text } = await provider.generate({ system, prompt });
-  const cleaned = text.replace(/```json|```/g, "").trim();
   let parsed: any;
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = parseJsonLoose(text);
   } catch {
-    throw new Error("The AI reply was not valid JSON. Please try again.");
+    // One automatic retry: the long scholar skill sometimes makes the model
+    // answer in prose first — a second attempt almost always returns clean JSON.
+    const { text: retryText } = await provider.generate({ system, prompt: `${prompt}\n\nIMPORTANT: your entire reply must be ONLY the JSON object, nothing else.` });
+    parsed = parseJsonLoose(retryText);
   }
   const topic = String(parsed?.topic ?? "").trim().slice(0, 200);
   const title = String(parsed?.title ?? "").trim().slice(0, 200);
