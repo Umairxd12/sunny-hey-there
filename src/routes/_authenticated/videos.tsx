@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Film } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Film, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState, PageHeader, RouteErrorFallback, StatusBadge } from "@/components/studio/ui";
 import { Button } from "@/components/ui/button";
+import { deleteVideo } from "@/lib/automation.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/videos")({
@@ -18,7 +21,9 @@ const PLATFORM_ORDER = ["TikTok", "Facebook Reels", "Facebook feed", "YouTube Sh
 const sectionOf = (platform: string) => PLATFORM_ORDER.includes(platform) ? platform : "Other";
 
 function Page() {
-  const { data, isLoading } = useQuery({
+  const router = useRouter();
+  const removeVideo = useServerFn(deleteVideo);
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["videos"],
     queryFn: async () => {
       const [vids, assets, projects] = await Promise.all([
@@ -82,7 +87,15 @@ function Page() {
                         {new Date(r.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <Button size="sm" asChild><Link to="/workspace/$projectId" params={{ projectId: r.projectId }}>Review</Link></Button>
+                    <div className="flex shrink-0 gap-1">
+                      <Button size="sm" asChild><Link to="/workspace/$projectId" params={{ projectId: r.projectId }}>Review</Link></Button>
+                      <Button size="icon" variant="ghost" aria-label="Delete video" title="Delete video" onClick={async () => {
+                        if (!window.confirm(`Delete "${r.title}"? The project stays — you can generate the video again.`)) return;
+                        const res = await removeVideo({ data: { projectId: r.projectId } });
+                        if (res.ok) { toast.success("Video deleted."); refetch(); router.invalidate(); }
+                        else toast.error(res.error);
+                      }}><Trash2 className="size-4" /></Button>
+                    </div>
                   </div>
                 </article>
               ))}

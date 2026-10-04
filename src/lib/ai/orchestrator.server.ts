@@ -17,7 +17,8 @@ const QA_LOG_MARKER = "\n\n---\n# QA LOG";
 const STAGE_TASKS: Record<string, string> = {
   meta_prompt: `Write the complete MASTER META PROMPT. Use exactly these sections as level-2 headings, in this order:
 Objective, Duration, Format, Story, Character Bible, World Bible, Visual Style, Action Logic, Comedy Logic, Camera Logic, Dialogue, Audio, Music, Continuity, Negative Constraints, Final Frame, Production Requirements.
-The story must move clearly through SETUP → ACTION → COMPLICATION → PAYOFF → FINAL FRAME.`,
+The story must move clearly through SETUP → ACTION → COMPLICATION → PAYOFF → FINAL FRAME.
+ONE-INVENTION RULE (non-negotiable): the entire video revolves around ONE single invention/contraption, ONE problem and ONE deadpan payoff. Never write a compilation of several gags or "N tiny problems". The story plays as ONE continuous scene — the same place, same light, same contraption from the first second to the last; only the camera moves.`,
   analysis_check: `Analyze the META PROMPT below end-to-end as a strict production QA reviewer. Check each item and mark it OK or PROBLEM with a one-line reason:
 Story logic, Character consistency, Environment continuity, Prop continuity, Action continuity, Camera continuity, Timing, Dialogue, Lip-sync, SFX, Music, Lighting, Colors, Animation feasibility, Video-model renderability, Comedy setup, Comedy payoff, Final-frame clarity, Generation risks.
 End with exactly one line: "VERDICT: PASS" if there are no problems, otherwise "VERDICT: FAIL".`,
@@ -31,10 +32,11 @@ Finish with a "World lock" list of details that must stay identical in every sho
   storyboard: `Create the PER-SECOND STORYBOARD. Write one block for EVERY second from SECOND 00 to the final second — no gaps, no ranges.
 Each block starts with a heading "SECOND NN" (two digits) and has these fields:
 Beat (SETUP / ACTION / COMPLICATION / PAYOFF / FINAL FRAME), Visual, Character action, Expression, Camera, Environment, Prop movement, Dialogue, SFX, Music, Continuity.
-Nothing may change without a visible cause. Respect the locked character and world designs exactly.`,
+CONTINUITY RULE: this is ONE continuous film, not separate sketches. Every SECOND block after the first must continue the previous second's end state — same characters, same ONE contraption, same background, same light. State the handoff explicitly in the Visual field ("CONTINUING: ..."). The camera may move (wide → medium → close-up); the world must not. Nothing may change without a visible cause. Respect the locked character and world designs exactly.`,
   final_prompt: `Write the FINAL VIDEO GENERATION PROMPT for an external video AI model. It must faithfully implement the per-second storyboard.
 Sections: Global prompt (style, characters, world — copied from the locks), Shot list (time range → exact visual/camera/action/audio), Negative prompt, Consistency notes.
-Then add a "CLIPS" section that splits the video into clips of at most 8 seconds each, formatted as lines: "CLIP n | from-to | prompt".`,
+Then add a "CLIPS" section that splits the video into clips of at most 8 seconds each, formatted as lines: "CLIP n | from-to | prompt".
+CLIP CONTINUITY: each clip prompt must open with "CONTINUING from the previous clip's end frame: ..." so the clips stitch into one continuous film. Describe the video's ONE contraption with IDENTICAL words in every clip.`,
   metadata: "Write social metadata for Facebook, YouTube and TikTok: title, description, short caption and 10-15 hashtags each.",
 };
 
@@ -225,15 +227,31 @@ export async function runStage(db: Db, userId: string, projectId: string, stageK
   }
 }
 
+/** Recent topics/ideas for this user — fed into idea prompts so new videos never repeat old scenes. */
+async function recentConcepts(userId: string | undefined): Promise<string> {
+  if (!userId) return "";
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.from("projects").select("title, topic, idea")
+      .eq("user_id", userId).order("created_at", { ascending: false }).limit(15);
+    const items = (data ?? []).map((p: any) => `- ${p.title ?? "Untitled"}${p.topic ? ` (${p.topic})` : ""}${p.idea ? `: ${String(p.idea).slice(0, 160)}` : ""}`);
+    if (!items.length) return "";
+    return `\nALREADY-MADE VIDEOS (never repeat these inventions, scenes or punchlines — invent something clearly different):\n${items.join("\n")}`;
+  } catch {
+    return "";
+  }
+}
 /** Suggests video ideas from the active skill when the user has none. */
-export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }) {
+export async function suggestIdeas(input: { topic?: string | undefined; platform?: string | undefined; audience?: string | undefined; duration: number; language: string }, userId?: string) {
   const skill = await loadActiveSkill();
   if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
   if (!provider) throw new ProviderNotConfiguredError("text");
   const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
+  const memory = await recentConcepts(userId);
   const prompt = `Suggest 5 short 3D cartoon video ideas that follow the active skill.
 Topic: ${input.topic || "any"} | Platform: ${input.platform || "any"} | Audience: ${input.audience || "general"} | Duration: ${input.duration}s | Language: ${input.language}
+Each idea must be ONE single invention with ONE continuous scene (never a compilation of gags).${memory}
 Output exactly 5 lines, no numbering, no extra text, each formatted as: Title :: one or two sentence idea with setup, complication and payoff.`;
   const { text } = await provider.generate({ system, prompt });
   return text.split("\n").map((l) => l.replace(/^[\s\-*\d.)]+/, "").trim()).filter((l) => l.includes("::")).slice(0, 5)
@@ -245,16 +263,17 @@ Output exactly 5 lines, no numbering, no extra text, each formatted as: Title ::
  * description from the active skill — used by the "AI se likhwao" button on
  * the Create page to fill the Title, Topic and Video idea fields at once.
  */
-export async function generateBrief(input: { duration: number; language: string }) {
+export async function generateBrief(input: { duration: number; language: string }, userId?: string) {
   const skill = await loadActiveSkill();
   if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
   if (!provider) throw new ProviderNotConfiguredError("text");
   const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
+  const memory = await recentConcepts(userId);
   const prompt = `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
 HARD RULES (the user rejects anything else):
 - ONE single invention / contraption in the whole video. ONE problem, ONE payoff. Never a compilation of several gags or "N tiny problems".
-- The concept must play as ONE continuous scene and story: setup shows the invention, the middle operates it, the end is the deadpan payoff — all in the same place, same light, no scene jumps.
+- The concept must play as ONE continuous scene and story: setup shows the invention, the middle operates it, the end is the deadpan payoff — all in the same place, same light, no scene jumps.${memory}
 Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
 {"topic": "2-4 word theme, e.g. Coconut Chaos", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the single invention, the setup, the complication and the deadpan payoff — written as ONE continuous scene the studio will produce."}`;
   const { text } = await provider.generate({ system, prompt });

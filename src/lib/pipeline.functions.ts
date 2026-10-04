@@ -19,10 +19,10 @@ export const suggestVideoIdeas = createServerFn({ method: "POST" })
     duration: z.number().int().min(3).max(180),
     language: z.string().max(40),
   }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { suggestIdeas } = await import("./ai/orchestrator.server");
     try {
-      return { ok: true as const, ideas: await suggestIdeas(data) };
+      return { ok: true as const, ideas: await suggestIdeas(data, context.userId) };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "Could not suggest ideas." };
     }
@@ -34,10 +34,10 @@ export const generateVideoBrief = createServerFn({ method: "POST" })
     duration: z.number().int().min(3).max(180),
     language: z.string().max(40),
   }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { generateBrief } = await import("./ai/orchestrator.server");
     try {
-      return { ok: true as const, brief: await generateBrief(data) };
+      return { ok: true as const, brief: await generateBrief(data, context.userId) };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "Could not generate a brief." };
     }

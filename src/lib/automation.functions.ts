@@ -153,6 +153,41 @@ export const approveAndPublishNow = createServerFn({ method: "POST" })
     return { ok: true as const, queued: targets.length };
   });
 
+/** Review gate: DELETE VIDEO. Removes the finished video (videos, clips, assets,
+ *  audio tracks) and resets the video pipeline steps so the video can be
+ *  regenerated. Script/storyboard/final-prompt stages are kept. Unsent posts
+ *  are cancelled like a reject. */
+export const deleteVideo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = context.supabase;
+    const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", data.projectId).single();
+    if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    for (const table of ["videos", "video_clips", "video_assets", "video_audio_tracks"] as const) {
+      const { error } = await db.from(table).delete().eq("project_id", data.projectId);
+      if (error) return { ok: false as const, error: error.message };
+    }
+    const { error: stepErr } = await db.from("pipeline_steps").delete()
+      .eq("project_id", data.projectId).in("step_key", ["generate_video", "video_analysis", "editing", "final_qa"]);
+    if (stepErr) return { ok: false as const, error: stepErr.message };
+    await db.from("scheduled_posts").update({ status: "CANCELLED", status_detail: "Video deleted by the owner.", updated_at: new Date().toISOString() })
+      .eq("project_id", data.projectId).is("external_post_id", null)
+      .in("status", ["DRAFT", "READY", "SCHEDULED", "RETRYING", "FAILED"]);
+    const { data: finalPrompt } = await db.from("pipeline_steps").select("status")
+      .eq("project_id", data.projectId).eq("step_key", "final_prompt").maybeSingle();
+    const ready = finalPrompt?.status === "done";
+    const now = new Date().toISOString();
+    const { error: pErr } = await db.from("projects").update({
+      status: ready ? "VIDEO_PROMPT" : "DRAFT", current_stage: ready ? "final_prompt" : null,
+      last_error: null, updated_at: now,
+    }).eq("id", data.projectId);
+    if (pErr) return { ok: false as const, error: pErr.message };
+    await db.from("production_history").insert({ project_id: data.projectId, action: "Video deleted", detail: "Finished video removed — ready to regenerate." });
+    const { logActivity } = await import("./jobs/jobs.server");
+    await logActivity({ userId: context.userId, category: "production", level: "info", projectId: data.projectId, event: "Video deleted", detail: project.title });
+    return { ok: true as const };
+  });
 /** Review gate: REJECT. Cancels every queued post for the project so nothing is
  *  ever uploaded. Already-published posts are never touched. */
 export const rejectProject = createServerFn({ method: "POST" })

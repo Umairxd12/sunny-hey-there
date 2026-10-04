@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { getEditingRecommendations, regenerateClip, renderMaster } from "@/lib/workspace.functions";
-import { approveAndPublishNow, rejectProject } from "@/lib/automation.functions";
+import { approveAndPublishNow, deleteVideo, rejectProject } from "@/lib/automation.functions";
 import { pageHead } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -37,6 +37,7 @@ function Workspace() {
   const render = useServerFn(renderMaster);
   const approve = useServerFn(approveAndPublishNow);
   const reject = useServerFn(rejectProject);
+  const removeVideo = useServerFn(deleteVideo);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [recs, setRecs] = useState<string | null>(null);
@@ -338,6 +339,15 @@ function Workspace() {
               refresh();
             }}>
               {busy === "reject" ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Reject video</Button>
+            <Button variant="outline" disabled={!finalAsset || !!busy} onClick={async () => {
+              if (!window.confirm("Delete this finished video? The script and storyboard stay — you can generate the video again.")) return;
+              setBusy("deleteVideo");
+              const r = await removeVideo({ data: { projectId } });
+              setBusy(null);
+              if (r.ok) { toast.success("Video deleted — ready to generate again."); } else { toast.error(r.error); }
+              refresh();
+            }}>
+              {busy === "deleteVideo" ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}Delete video</Button>
           </div>
           {!finalAsset && <p className="mt-2 text-xs text-muted-foreground">Approve and Reject unlock once a final video exists.</p>}
         </div>
