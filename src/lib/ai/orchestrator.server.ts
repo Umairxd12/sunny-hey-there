@@ -252,8 +252,11 @@ export async function generateBrief(input: { duration: number; language: string 
   if (!provider) throw new ProviderNotConfiguredError("text");
   const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
   const prompt = `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
+HARD RULES (the user rejects anything else):
+- ONE single invention / contraption in the whole video. ONE problem, ONE payoff. Never a compilation of several gags or "N tiny problems".
+- The concept must play as ONE continuous scene and story: setup shows the invention, the middle operates it, the end is the deadpan payoff — all in the same place, same light, no scene jumps.
 Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
-{"topic": "2-4 word theme, e.g. Coconut Chaos", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the setup, the complication and the deadpan payoff. Write it as the video idea the studio will produce."}`;
+{"topic": "2-4 word theme, e.g. Coconut Chaos", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the single invention, the setup, the complication and the deadpan payoff — written as ONE continuous scene the studio will produce."}`;
   const { text } = await provider.generate({ system, prompt });
   const cleaned = text.replace(/```json|```/g, "").trim();
   let parsed: any;

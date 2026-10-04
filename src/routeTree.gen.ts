@@ -32,6 +32,7 @@ import { Route as ApiPublicHooksSyncAnalyticsRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksVideoChatDeliveryRouteImport } from './routes/api/public/hooks/video-chat-delivery'
 import { Route as ApiPublicHooksVideoJobUploadRouteImport } from './routes/api/public/hooks/video-job-upload'
 import { Route as ApiPublicHooksVideoJobsRouteImport } from './routes/api/public/hooks/video-jobs'
+import { Route as ApiPublicHooksVideoRemakeRouteImport } from './routes/api/public/hooks/video-remake'
 import { Route as ApiPublicOauthPlatformCallbackRouteImport } from './routes/api/public/oauth.$platform.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -156,6 +157,12 @@ const ApiPublicHooksVideoJobsRoute = ApiPublicHooksVideoJobsRouteImport.update({
   path: '/api/public/hooks/video-jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksVideoRemakeRoute =
+  ApiPublicHooksVideoRemakeRouteImport.update({
+    id: '/api/public/hooks/video-remake',
+    path: '/api/public/hooks/video-remake',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOauthPlatformCallbackRoute =
   ApiPublicOauthPlatformCallbackRouteImport.update({
     id: '/api/public/oauth/$platform/callback',
@@ -186,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
+  '/api/public/hooks/video-remake': typeof ApiPublicHooksVideoRemakeRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -211,6 +219,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
+  '/api/public/hooks/video-remake': typeof ApiPublicHooksVideoRemakeRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRoutesById {
@@ -238,6 +247,7 @@ export interface FileRoutesById {
   '/api/public/hooks/video-chat-delivery': typeof ApiPublicHooksVideoChatDeliveryRoute
   '/api/public/hooks/video-job-upload': typeof ApiPublicHooksVideoJobUploadRoute
   '/api/public/hooks/video-jobs': typeof ApiPublicHooksVideoJobsRoute
+  '/api/public/hooks/video-remake': typeof ApiPublicHooksVideoRemakeRoute
   '/api/public/oauth/$platform/callback': typeof ApiPublicOauthPlatformCallbackRoute
 }
 export interface FileRouteTypes {
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
+    | '/api/public/hooks/video-remake'
     | '/api/public/oauth/$platform/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
+    | '/api/public/hooks/video-remake'
     | '/api/public/oauth/$platform/callback'
   id:
     | '__root__'
@@ -316,6 +328,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/video-chat-delivery'
     | '/api/public/hooks/video-job-upload'
     | '/api/public/hooks/video-jobs'
+    | '/api/public/hooks/video-remake'
     | '/api/public/oauth/$platform/callback'
   fileRoutesById: FileRoutesById
 }
@@ -328,6 +341,7 @@ export interface RootRouteChildren {
   ApiPublicHooksVideoChatDeliveryRoute: typeof ApiPublicHooksVideoChatDeliveryRoute
   ApiPublicHooksVideoJobUploadRoute: typeof ApiPublicHooksVideoJobUploadRoute
   ApiPublicHooksVideoJobsRoute: typeof ApiPublicHooksVideoJobsRoute
+  ApiPublicHooksVideoRemakeRoute: typeof ApiPublicHooksVideoRemakeRoute
   ApiPublicOauthPlatformCallbackRoute: typeof ApiPublicOauthPlatformCallbackRoute
 }
 
@@ -494,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVideoJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/video-remake': {
+      id: '/api/public/hooks/video-remake'
+      path: '/api/public/hooks/video-remake'
+      fullPath: '/api/public/hooks/video-remake'
+      preLoaderRoute: typeof ApiPublicHooksVideoRemakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/$platform/callback': {
       id: '/api/public/oauth/$platform/callback'
       path: '/api/public/oauth/$platform/callback'
@@ -564,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksVideoChatDeliveryRoute: ApiPublicHooksVideoChatDeliveryRoute,
   ApiPublicHooksVideoJobUploadRoute: ApiPublicHooksVideoJobUploadRoute,
   ApiPublicHooksVideoJobsRoute: ApiPublicHooksVideoJobsRoute,
+  ApiPublicHooksVideoRemakeRoute: ApiPublicHooksVideoRemakeRoute,
   ApiPublicOauthPlatformCallbackRoute: ApiPublicOauthPlatformCallbackRoute,
 }
 export const routeTree = rootRouteImport
