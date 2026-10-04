@@ -257,6 +257,12 @@ function parseJsonLoose(text: string): any {
   }
   throw new Error("The AI reply was not valid JSON. Please try again.");
 }
+/** Short brief-mode system prompt for the 2D scholar. The full 13KB skill is
+ *  NOT sent here: it makes the model answer in verbose scholar prose instead
+ *  of the required JSON. The full skill still drives runStage/suggestIdeas. */
+const SCHOLAR_BRIEF_SYSTEM = `You invent concepts for a 2D minimalist educational cartoon series: narrated stories (unseen omniscient narrator) starring a simple caveman-like protagonist (white oval face, spiky black hair, brown fur tunic), flat 2D vector style, 16:9.
+Topic families (rotate — never repeat the family or subject of an already-made video): prehistoric human survival, evolutionary biology/psychology, archaeological breakthroughs & primitive inventions, apex predator behavior/animal cognition, obscure high-curiosity wildcards.
+Each video is ONE continuous narrated story: a hook question, the core science/history, and a paradigm-shifting payoff. Never repeat topics, backgrounds or ideas.`;
 /** Recent topics/ideas for this user — fed into idea prompts so new videos never repeat old scenes. */
 async function recentConcepts(userId: string | undefined): Promise<string> {
   if (!userId) return "";
@@ -297,18 +303,22 @@ Output exactly 5 lines, no numbering, no extra text, each formatted as: Title ::
  * the Create page to fill the Title, Topic and Video idea fields at once.
  */
 export async function generateBrief(input: { duration: number; language: string }, userId?: string, scholar = false) {
-  const skill = scholar ? await loadScholarSkill() : await loadActiveSkill();
-  if (!skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
+  const skill = scholar ? null : await loadActiveSkill();
+  if (!scholar && !skill) throw new Error("No active skill. Upload and activate a SKILL.md in Skill Manager first.");
   const provider = getTextProvider();
   if (!provider) throw new ProviderNotConfiguredError("text");
-  const system = `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill.name ?? "SKILL.md"} v${skill.version} ===\n${skill.content}\n=== END SKILL ===`;
+  // Scholar briefs use the SHORT brief prompt — the full 13KB scholar skill
+  // makes the model return verbose prose instead of JSON.
+  const system = scholar
+    ? `${SYSTEM_INSTRUCTIONS}\n\n${SCHOLAR_BRIEF_SYSTEM}`
+    : `${SYSTEM_INSTRUCTIONS}\n\n=== ACTIVE SKILL: ${skill!.name ?? "SKILL.md"} v${skill!.version} ===\n${skill!.content}\n=== END SKILL ===`;
   const memory = await recentConcepts(userId);
   const prompt = scholar
     ? `Invent ONE fresh educational 2D minimalist animation concept from the scholar's topic families (prehistoric human survival, evolutionary biology/psychology, archaeological breakthroughs & primitive inventions, apex predator behavior/animal cognition, obscure high-curiosity wildcards). Duration: ${input.duration}s. Language: ${input.language}.
 HARD RULES:
 - Pick a topic family DIFFERENT from the already-made videos below — the owner demands a new topic every time, never the same background/subject twice.
 - The concept is a narrated story (unseen omniscient narrator) for flat 2D minimalist vector animation per the skill's visual laws.${memory}
-Return ONLY valid JSON with exactly these three keys — no markdown fences, no extra text:
+YOUR ENTIRE REPLY MUST BE ONLY THE JSON OBJECT BELOW — start with { and end with }. No intro, no markdown, no commentary:
 {"topic": "2-4 word theme, e.g. Fire Keepers", "title": "catchy video title, max 8 words", "description": "3-5 sentences: the hook question, the core science/history, and the paradigm-shifting payoff."}`
     : `Invent ONE fresh, original short 3D cartoon video concept that follows the active skill (its characters, world, comedy structure and punchline style). Duration: ${input.duration}s. Language: ${input.language}.
 HARD RULES (the user rejects anything else):
