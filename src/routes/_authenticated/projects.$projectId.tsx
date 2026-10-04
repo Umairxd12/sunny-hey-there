@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LOCKED_STAGES, STAGES, nextRunnableIndex } from "@/lib/pipeline";
 import { delegateFullPipeline, delegateVideoToWorker, deleteProject, resetProject, runPipelineStep } from "@/lib/pipeline.functions";
+import { deleteVideo } from "@/lib/automation.functions";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -30,6 +31,7 @@ function ProjectPage() {
   const delegate = useServerFn(delegateVideoToWorker);
   const delegateFull = useServerFn(delegateFullPipeline);
   const delProject = useServerFn(deleteProject);
+  const delVideo = useServerFn(deleteVideo);
   const resetProj = useServerFn(resetProject);
   const [running, setRunning] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
@@ -123,6 +125,23 @@ function ProjectPage() {
     }
   }
 
+  /** Deletes only the finished video (MP4 + clips). Script, storyboard and
+   *  prompts stay, so the video can be regenerated. */
+  async function removeVideo() {
+    if (!window.confirm("Video delete karni hai? Sirf finished video aur clips delete honge — script aur storyboard rahenge, dobara bana sakte ho.")) return;
+    setActionBusy(true);
+    try {
+      const res = await delVideo({ data: { projectId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success("Video delete ho gayi.");
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   /** Permanently deletes the project and everything in it. */
   async function remove() {
     if (!window.confirm("Project delete karna hai? Ye hamesha ke liye chala jayega — video, clips, sab kuch.")) return;
@@ -146,6 +165,9 @@ function ProjectPage() {
           <Button variant="outline" asChild><Link to="/projects">All projects</Link></Button>
           <Button variant="outline" disabled={actionBusy} onClick={recreate}>
             {actionBusy ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}Dobara banao
+          </Button>
+          <Button variant="outline" disabled={actionBusy} onClick={removeVideo}>
+            <Trash2 className="size-4" />Delete video
           </Button>
           <Button variant="destructive" disabled={actionBusy} onClick={remove}>
             <Trash2 className="size-4" />Delete

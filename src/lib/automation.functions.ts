@@ -164,26 +164,37 @@ export const deleteVideo = createServerFn({ method: "POST" })
     const db = context.supabase;
     const { data: project } = await db.from("projects").select("id, user_id, title").eq("id", data.projectId).single();
     if (!project || project.user_id !== context.userId) return { ok: false as const, error: "Project not found." };
+    // Ownership verified above — use the admin client for the deletes so a
+    // missing/flaky RLS DELETE policy can never silently block the user's
+    // own delete request.
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    // Best-effort: remove the stored MP4 files too, so the delete is real.
+    const { data: assets } = await admin.from("video_assets").select("url").eq("project_id", data.projectId);
+    const paths = (assets ?? []).map((a: any) => {
+      const m = String(a.url ?? "").match(/\/videos\/(.+)$/);
+      return m ? m[1] : null;
+    }).filter(Boolean) as string[];
+    if (paths.length) await admin.storage.from("videos").remove(paths);
     for (const table of ["videos", "video_clips", "video_assets", "video_audio_tracks"] as const) {
-      const { error } = await db.from(table).delete().eq("project_id", data.projectId);
+      const { error } = await admin.from(table).delete().eq("project_id", data.projectId);
       if (error) return { ok: false as const, error: error.message };
     }
-    const { error: stepErr } = await db.from("pipeline_steps").delete()
+    const { error: stepErr } = await admin.from("pipeline_steps").delete()
       .eq("project_id", data.projectId).in("step_key", ["generate_video", "video_analysis", "editing", "final_qa"]);
     if (stepErr) return { ok: false as const, error: stepErr.message };
-    await db.from("scheduled_posts").update({ status: "CANCELLED", status_detail: "Video deleted by the owner.", updated_at: new Date().toISOString() })
+    await admin.from("scheduled_posts").update({ status: "CANCELLED", status_detail: "Video deleted by the owner.", updated_at: new Date().toISOString() })
       .eq("project_id", data.projectId).is("external_post_id", null)
       .in("status", ["DRAFT", "READY", "SCHEDULED", "RETRYING", "FAILED"]);
-    const { data: finalPrompt } = await db.from("pipeline_steps").select("status")
+    const { data: finalPrompt } = await admin.from("pipeline_steps").select("status")
       .eq("project_id", data.projectId).eq("step_key", "final_prompt").maybeSingle();
     const ready = finalPrompt?.status === "done";
     const now = new Date().toISOString();
-    const { error: pErr } = await db.from("projects").update({
+    const { error: pErr } = await admin.from("projects").update({
       status: ready ? "VIDEO_PROMPT" : "DRAFT", current_stage: ready ? "final_prompt" : null,
       last_error: null, updated_at: now,
     }).eq("id", data.projectId);
     if (pErr) return { ok: false as const, error: pErr.message };
-    await db.from("production_history").insert({ project_id: data.projectId, action: "Video deleted", detail: "Finished video removed — ready to regenerate." });
+    await admin.from("production_history").insert({ project_id: data.projectId, action: "Video deleted", detail: "Finished video removed — ready to regenerate." });
     const { logActivity } = await import("./jobs/jobs.server");
     await logActivity({ userId: context.userId, category: "production", level: "info", projectId: data.projectId, event: "Video deleted", detail: project.title });
     return { ok: true as const };
