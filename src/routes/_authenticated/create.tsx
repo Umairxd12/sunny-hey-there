@@ -140,10 +140,10 @@ function CreateVideo() {
     <>
       <PageHeader title={is2D ? "Create 2D video" : "Create video"} description={is2D ? "2D Studio — same cast and comedy, drawn as a flat 2D cartoon. One click hands everything else to TechGenie." : "Step 1 — describe your idea. One click hands everything else to TechGenie."} />
       <div className="mb-5 flex max-w-2xl items-center gap-4 rounded-2xl border bg-card p-4">
-        <img src={LOCKED_CHARACTERS.images.duo} alt="Locked characters: otter and raccoon" className="h-20 w-14 shrink-0 rounded-xl object-cover" />
+        <img src={is2D ? "/characters/scholar-protagonist.jpg" : LOCKED_CHARACTERS.images.duo} alt={is2D ? "Locked 2D character: minimalist caveman protagonist" : "Locked characters: otter and raccoon"} className="h-20 w-14 shrink-0 rounded-xl object-cover" />
         <div className="text-sm">
-          <p className="font-semibold">Locked characters: otter & raccoon{is2D ? " — in 2D style" : ""}</p>
-          <p className="mt-0.5 text-muted-foreground">{is2D ? "Your approved cast drawn as a flat 2D cartoon — goggles, tool belt, scale, all locked. Script, storyboard and the video itself are all made by TechGenie through the studio API." : "Your approved cast — goggles, tool belt, scale — is locked for every video. Script, storyboard, characters and the video itself are all made by TechGenie through the studio API."}</p>
+          <p className="font-semibold">{is2D ? "Locked 2D character: caveman protagonist" : "Locked characters: otter & raccoon"}</p>
+          <p className="mt-0.5 text-muted-foreground">{is2D ? "Your approved 2D character — white oval face, spiky black hair, brown fur tunic — locked for every 2D video. The 3D otter & raccoon are never used here. Script, storyboard and the video itself are all made by TechGenie through the studio API." : "Your approved cast — goggles, tool belt, scale — is locked for every video. Script, storyboard, characters and the video itself are all made by TechGenie through the studio API."}</p>
         </div>
       </div>
       <form onSubmit={(e) => submit(e, true)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">

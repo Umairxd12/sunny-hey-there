@@ -2,6 +2,8 @@
 // Owner pasted this master prompt 2026-10-04: when a 2D project runs its
 // pipeline, THIS skill drives the meta prompt / storyboard / video prompts
 // (not the 3D cartoon skill). Same pattern as character-lock.ts.
+// 2D character: the owner's minimalist caveman protagonist
+// (public/characters/scholar-protagonist.jpg) — never the 3D otter/raccoon.
 export const SCHOLAR_SKILL = {
   name: "2d-minimalist-scholar",
   version: 1,
@@ -142,7 +144,7 @@ Pristine black contour lines with deliberate, subtle organic imperfections. Thic
 ANATOMY (THE MINIMALIST PROTAGONIST):
 • Cranium: Oversized, pure white/off-white oval.
 • Facial UI: Microscopic black dot eyes. Micro-line mouth. Expressive, high-readability emotions (terror, smugness, bewilderment). No complex noses or shading.
-• Hair: Blocky, jagged, dark-brunette silhouettes without individual strand rendering.
+• Hair: Messy spiky black spikes sticking up (the owner's locked look), no individual strand rendering.
 • Form: Wire-thin black appendages.
 • Garments: Monochromatic, jagged-cut primitive tunics (brown/tan).
 
@@ -196,7 +198,7 @@ Format each prompt cleanly:
 [Index]. [16:9 aspect ratio directive] [Compositional framing] [Subject continuity string] [Action/Emotion] [Environment details] [Style lock string] [Negative constraints]
 
 The "Style Lock String" must be appended to the end of every prompt:
-"Clean flat hand-drawn 2D vector educational animation, pale-blue sky, warm sandy-tan ground, oversized white oval face, tiny black dot eyes, blocky dark-brown hair, thin black limbs, solid black outlines, flat limited palette, sparse background detail, no shading, no photorealism, no 3D, no anime aesthetics, no glossy finish, exact 16:9 landscape."
+"Clean flat hand-drawn 2D vector educational animation, pale-blue sky, warm sandy-tan ground, oversized white oval face, tiny black dot eyes, spiky black hair, thin black limbs, solid black outlines, flat limited palette, sparse background detail, no shading, no photorealism, no 3D, no anime aesthetics, no glossy finish, exact 16:9 landscape."
 
 For volumes exceeding 20 prompts, segment with headers (e.g., CLUSTER 01: IMAGES 001-020).
 
