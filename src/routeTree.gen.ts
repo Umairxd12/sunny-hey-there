@@ -22,6 +22,7 @@ import { Route as AuthenticatedSchedulerRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated/skills'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
+import { Route as AuthenticatedStudio2dRouteImport } from './routes/_authenticated/studio-2d'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
 import { Route as AuthenticatedAnalyticsPostIdRouteImport } from './routes/_authenticated/analytics.$postId'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
@@ -97,6 +98,11 @@ const AuthenticatedSkillsRoute = AuthenticatedSkillsRouteImport.update({
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
   id: '/social',
   path: '/social',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStudio2dRoute = AuthenticatedStudio2dRouteImport.update({
+  id: '/studio-2d',
+  path: '/studio-2d',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/studio-2d': typeof AuthenticatedStudio2dRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/studio-2d': typeof AuthenticatedStudio2dRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/skills': typeof AuthenticatedSkillsRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
+  '/_authenticated/studio-2d': typeof AuthenticatedStudio2dRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/analytics/$postId': typeof AuthenticatedAnalyticsPostIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/social'
+    | '/studio-2d'
     | '/videos'
     | '/analytics/$postId'
     | '/projects/$projectId'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/social'
+    | '/studio-2d'
     | '/videos'
     | '/analytics/$postId'
     | '/projects/$projectId'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/skills'
     | '/_authenticated/social'
+    | '/_authenticated/studio-2d'
     | '/_authenticated/videos'
     | '/_authenticated/analytics/$postId'
     | '/_authenticated/projects/$projectId'
@@ -438,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSocialRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/studio-2d': {
+      id: '/_authenticated/studio-2d'
+      path: '/studio-2d'
+      fullPath: '/studio-2d'
+      preLoaderRoute: typeof AuthenticatedStudio2dRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/videos': {
       id: '/_authenticated/videos'
       path: '/videos'
@@ -550,6 +569,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
+  AuthenticatedStudio2dRoute: typeof AuthenticatedStudio2dRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRoute
   AuthenticatedWorkspaceProjectIdRoute: typeof AuthenticatedWorkspaceProjectIdRoute
@@ -567,6 +587,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSkillsRoute: AuthenticatedSkillsRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
+  AuthenticatedStudio2dRoute: AuthenticatedStudio2dRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedProjectsProjectIdRoute: AuthenticatedProjectsProjectIdRoute,
   AuthenticatedWorkspaceProjectIdRoute: AuthenticatedWorkspaceProjectIdRoute,
@@ -591,13 +612,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

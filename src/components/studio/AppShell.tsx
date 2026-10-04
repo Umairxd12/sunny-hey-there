@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; search?: Record<string, string> }[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/create", label: "Create Video", icon: Sparkles },
-  { to: "/create", label: "2D Studio", icon: Brush, search: { mode: "2d" } },
+  { to: "/studio-2d", label: "2D Studio", icon: Brush },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/videos", label: "Videos", icon: Film },
   { to: "/social", label: "Social Accounts", icon: Share2 },
@@ -24,14 +24,10 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; search?: R
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
-  const is2D = search["mode"] === "2d";
   return (
     <nav className="flex flex-col gap-0.5">
       {NAV.map(({ to, label, icon: Icon, search: itemSearch }) => {
-        const wants2D = itemSearch?.["mode"] === "2d";
-        const active = wants2D ? (path === to || path.startsWith(to + "/")) && is2D
-          : (path === to || path.startsWith(to + "/")) && !is2D;
+        const active = path === to || path.startsWith(to + "/");
         return (
           <Link key={label} to={to} {...(itemSearch ? { search: itemSearch } : {})} onClick={onNavigate}
             className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
