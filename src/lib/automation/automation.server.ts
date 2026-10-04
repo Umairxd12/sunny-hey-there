@@ -8,8 +8,9 @@ type Db = SupabaseClient<Database>;
 type Settings = Database["public"]["Tables"]["automation_settings"]["Row"];
 
 export const DEFAULT_SETTINGS = (userId: string): Settings => ({
-  user_id: userId, country: "US", timezone: "America/New_York", frequency: "daily", days_of_week: [1, 2, 3, 4, 5],
-  publish_times: ["18:00"], custom_slots: [], platforms: [], account_ids: [], emergency_stop: false,
+  user_id: userId, country: "US", timezone: "America/New_York", frequency: "daily", days_of_week: [0, 1, 2, 3, 4, 5, 6],
+  // US peak audience hours (Eastern): lunch scroll, evening prime, late evening.
+  publish_times: ["12:00", "19:00", "21:00"], custom_slots: [], platforms: [], account_ids: [], emergency_stop: false,
   emergency_stopped_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 });
 
