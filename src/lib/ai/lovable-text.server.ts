@@ -17,27 +17,37 @@ export function createLovableTextProvider(): TextGenerationProvider {
         apiKey,
         headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
       });
-      let failure: unknown;
-      const result = streamText({
-        model: provider.responses(MODEL),
-        system,
-        prompt,
-        onError: ({ error }) => { failure = error; },
-        providerOptions: {
-          openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] },
-        },
-      });
-      const text = await result.text;
-      if (failure || !text.trim()) {
-        const status = (failure as { statusCode?: number })?.statusCode ?? 500;
-        throw new Error(
-          status === 402 ? "AI credits are used up. Add credits in workspace settings, or connect your own text provider."
-          : status === 429 ? "Too many AI requests right now. Please wait a moment and try again."
-          : status === 403 ? "AI access is blocked for this workspace."
-          : "The AI did not return a result. Please try again.",
-        );
+      let failure: unknown = null;
+      // Two attempts: the model stream sometimes ends without a finish chunk
+      // (SDK throws NoOutputGeneratedError from `result.text`). Retry once,
+      // then surface a friendly message — never the raw SDK error.
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        let streamError: unknown = null;
+        try {
+          const result = streamText({
+            model: provider.responses(MODEL),
+            system,
+            prompt,
+            onError: ({ error }) => { streamError = error; },
+            providerOptions: {
+              openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] },
+            },
+          });
+          const text = await result.text;
+          if (!streamError && text.trim()) return { text, model: MODEL };
+          failure = streamError ?? new Error("empty-stream");
+        } catch (e) {
+          failure = streamError ?? e;
+        }
+        if (attempt === 1) await new Promise((r) => setTimeout(r, 1500));
       }
-      return { text, model: MODEL };
+      const status = (failure as { statusCode?: number })?.statusCode ?? 500;
+      throw new Error(
+        status === 402 ? "AI credits are used up. Add credits in workspace settings, or connect your own text provider."
+        : status === 429 ? "Too many AI requests right now. Please wait a moment and try again."
+        : status === 403 ? "AI access is blocked for this workspace."
+        : "The AI did not return a result. Please try again.",
+      );
     },
   };
 }
